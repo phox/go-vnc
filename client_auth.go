@@ -4,6 +4,12 @@ import (
 	"net"
 )
 
+const (
+	secTypeInvalid = iota
+	secTypeNone
+	secTypeVNCAuth
+)
+
 // A ClientAuth implements a method of authenticating with a remote server.
 type ClientAuth interface {
 	// SecurityType returns the byte identifier sent by the server to
@@ -19,7 +25,7 @@ type ClientAuth interface {
 type ClientAuthNone struct{}
 
 func (*ClientAuthNone) SecurityType() uint8 {
-	return 1
+	return secTypeNone
 }
 
 func (*ClientAuthNone) Handshake(net.Conn) error {
