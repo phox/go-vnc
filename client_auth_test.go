@@ -25,8 +25,8 @@ func TestClientAuthVNC_Impl(t *testing.T) {
 // wiresharkToChallenge converts VNC authentication challenge and response
 // values captured with Wireshark (https://www.wireshark.org) into usable byte
 // streams.
-func wiresharkToChallenge(h string) [challengeSize]byte {
-	var c [challengeSize]byte
+func wiresharkToChallenge(h string) [vncAuthChallengeSize]byte {
+	var c [vncAuthChallengeSize]byte
 	r := strings.NewReplacer(":", "")
 	b, err := hex.DecodeString(r.Replace(h))
 	if err != nil {

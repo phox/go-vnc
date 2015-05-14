@@ -18,15 +18,20 @@ type ClientAuthVNC struct {
 }
 
 func (*ClientAuthVNC) SecurityType() uint8 {
-	return 2
+	return secTypeVNCAuth
 }
 
 // 7.2.2. VNC Authentication uses a 16-byte challenge.
-const challengeSize = 16
+const vncAuthChallengeSize = 16
 
 func (auth *ClientAuthVNC) Handshake(conn net.Conn) error {
+
+	if auth.Password == "" {
+		return NewVNCError("securityHandshake: handshake failed; no password provided for VNCAuth.")
+	}
+
 	// Read challenge block
-	var challenge [challengeSize]byte
+	var challenge [vncAuthChallengeSize]byte
 	if err := binary.Read(conn, binary.BigEndian, &challenge); err != nil {
 		return err
 	}
@@ -41,7 +46,7 @@ func (auth *ClientAuthVNC) Handshake(conn net.Conn) error {
 	return nil
 }
 
-func (auth *ClientAuthVNC) encode(c *[challengeSize]byte) error {
+func (auth *ClientAuthVNC) encode(c *[vncAuthChallengeSize]byte) error {
 	// Copy password string to 8 byte 0-padded slice
 	key := make([]byte, 8)
 	copy(key, auth.Password)
@@ -59,7 +64,7 @@ func (auth *ClientAuthVNC) encode(c *[challengeSize]byte) error {
 	if err != nil {
 		return err
 	}
-	for i := 0; i < challengeSize; i += cipher.BlockSize() {
+	for i := 0; i < vncAuthChallengeSize; i += cipher.BlockSize() {
 		cipher.Encrypt(c[i:i+cipher.BlockSize()], c[i:i+cipher.BlockSize()])
 	}
 
