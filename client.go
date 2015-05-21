@@ -30,6 +30,7 @@ import (
 
 const (
 	setPixelFormatMsg = iota
+	_
 	setEncodingsMsg
 	framebufferUpdateRequestMsg
 	keyEventMsg
@@ -72,7 +73,7 @@ func (c *ClientConn) SetPixelFormat(format *PixelFormat) error {
 // See RFC 6143 Section 7.5.2
 func (c *ClientConn) SetEncodings(encs []Encoding) error {
 	data := make([]interface{}, 3+len(encs))
-	data[0] = uint8(2)
+	data[0] = uint8(setEncodingsMsg)
 	data[1] = uint8(0)
 	data[2] = uint16(len(encs))
 
@@ -104,14 +105,14 @@ func (c *ClientConn) SetEncodings(encs []Encoding) error {
 // See RFC 6143 Section 7.5.3
 func (c *ClientConn) FramebufferUpdateRequest(incremental bool, x, y, width, height uint16) error {
 	var buf bytes.Buffer
-	var incrementalByte uint8 = 0
+	var incrementalByte uint8
 
 	if incremental {
 		incrementalByte = 1
 	}
 
 	data := []interface{}{
-		uint8(3),
+		uint8(framebufferUpdateMsg),
 		incrementalByte,
 		x, y, width, height,
 	}
@@ -141,7 +142,7 @@ func (c *ClientConn) KeyEvent(keysym uint32, down bool) error {
 	}
 
 	data := []interface{}{
-		uint8(4),
+		uint8(keyEventMsg),
 		downFlag,
 		uint8(0),
 		uint8(0),
@@ -168,7 +169,7 @@ func (c *ClientConn) PointerEvent(mask ButtonMask, x, y uint16) error {
 	var buf bytes.Buffer
 
 	data := []interface{}{
-		uint8(5),
+		uint8(pointerEventMsg),
 		uint8(mask),
 		x,
 		y,
@@ -198,7 +199,7 @@ func (c *ClientConn) ClientCutText(text string) error {
 
 	// This is the fixed size data we'll send
 	fixedData := []interface{}{
-		uint8(6),
+		uint8(clientCutTextMsg),
 		uint8(0),
 		uint8(0),
 		uint8(0),
