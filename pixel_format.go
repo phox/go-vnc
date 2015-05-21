@@ -1,3 +1,8 @@
+/*
+Pixel Format implements RFC 6143 §7.4 Pixel Format Data Structure.
+
+See http://tools.ietf.org/html/rfc6143#section-7.4 for more info.
+*/
 package vnc
 
 import (
@@ -7,8 +12,6 @@ import (
 )
 
 // PixelFormat describes the way a pixel is formatted for a VNC connection.
-//
-// See RFC 6143 Section 7.4 for information on each of the fields.
 type PixelFormat struct {
 	BPP        uint8
 	Depth      uint8

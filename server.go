@@ -1,9 +1,21 @@
+/*
+Server implements RFC 6143 §7.6 Server-to-Client Messages.
+
+See http://tools.ietf.org/html/rfc6143#section-7.6 for more info.
+*/
 package vnc
 
 import (
 	"encoding/binary"
 	"fmt"
 	"io"
+)
+
+const (
+	framebufferUpdateMsg = iota
+	setColorMapEntriesMsg
+	bellMsg
+	serverCutTextMsg
 )
 
 // A ServerMessage implements a message sent from the server to the client.
@@ -17,9 +29,9 @@ type ServerMessage interface {
 	Read(*ClientConn, io.Reader) (ServerMessage, error)
 }
 
-// FramebufferUpdateMessage consists of a sequence of rectangles of
+// FramebufferUpdate consists of a sequence of rectangles of
 // pixel data that the client should put into its framebuffer.
-type FramebufferUpdateMessage struct {
+type FramebufferUpdate struct {
 	Rectangles []Rectangle
 }
 
@@ -32,11 +44,11 @@ type Rectangle struct {
 	Enc    Encoding
 }
 
-func (*FramebufferUpdateMessage) Type() uint8 {
-	return 0
+func (*FramebufferUpdate) Type() uint8 {
+	return framebufferUpdateMsg
 }
 
-func (*FramebufferUpdateMessage) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
+func (*FramebufferUpdate) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
 	// Read off the padding
 	var padding [1]byte
 	if _, err := io.ReadFull(r, padding[:]); err != nil {
@@ -89,32 +101,38 @@ func (*FramebufferUpdateMessage) Read(c *ClientConn, r io.Reader) (ServerMessage
 		}
 	}
 
-	return &FramebufferUpdateMessage{rects}, nil
+	return &FramebufferUpdate{rects}, nil
 }
 
-// SetColorMapEntriesMessage is sent by the server to set values into
+// SetColorMapEntries is sent by the server to set values into
 // the color map. This message will automatically update the color map
 // for the associated connection, but contains the color change data
 // if the consumer wants to read it.
 //
 // See RFC 6143 Section 7.6.2
-type SetColorMapEntriesMessage struct {
+
+// Color represents a single color in a color map.
+type Color struct {
+	R, G, B uint16
+}
+
+type SetColorMapEntries struct {
 	FirstColor uint16
 	Colors     []Color
 }
 
-func (*SetColorMapEntriesMessage) Type() uint8 {
-	return 1
+func (*SetColorMapEntries) Type() uint8 {
+	return setColorMapEntriesMsg
 }
 
-func (*SetColorMapEntriesMessage) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
+func (*SetColorMapEntries) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
 	// Read off the padding
 	var padding [1]byte
 	if _, err := io.ReadFull(r, padding[:]); err != nil {
 		return nil, err
 	}
 
-	var result SetColorMapEntriesMessage
+	var result SetColorMapEntries
 	if err := binary.Read(r, binary.BigEndian, &result.FirstColor); err != nil {
 		return nil, err
 	}
@@ -150,28 +168,28 @@ func (*SetColorMapEntriesMessage) Read(c *ClientConn, r io.Reader) (ServerMessag
 // Bell signals that an audible bell should be made on the client.
 //
 // See RFC 6143 Section 7.6.3
-type BellMessage byte
+type Bell struct{}
 
-func (*BellMessage) Type() uint8 {
-	return 2
+func (*Bell) Type() uint8 {
+	return bellMsg
 }
 
-func (*BellMessage) Read(*ClientConn, io.Reader) (ServerMessage, error) {
-	return new(BellMessage), nil
+func (*Bell) Read(*ClientConn, io.Reader) (ServerMessage, error) {
+	return new(Bell), nil
 }
 
-// ServerCutTextMessage indicates the server has new text in the cut buffer.
+// ServerCutText indicates the server has new text in the cut buffer.
 //
 // See RFC 6143 Section 7.6.4
-type ServerCutTextMessage struct {
+type ServerCutText struct {
 	Text string
 }
 
-func (*ServerCutTextMessage) Type() uint8 {
-	return 3
+func (*ServerCutText) Type() uint8 {
+	return serverCutTextMsg
 }
 
-func (*ServerCutTextMessage) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
+func (*ServerCutText) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
 	// Read off the padding
 	var padding [1]byte
 	if _, err := io.ReadFull(r, padding[:]); err != nil {
@@ -188,5 +206,5 @@ func (*ServerCutTextMessage) Read(c *ClientConn, r io.Reader) (ServerMessage, er
 		return nil, err
 	}
 
-	return &ServerCutTextMessage{string(textBytes)}, nil
+	return &ServerCutText{string(textBytes)}, nil
 }

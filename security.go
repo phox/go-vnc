@@ -1,8 +1,7 @@
 /*
-ClientAuthVNC implements the ClientAuth interface to provide support for
-VNC Authentication.
+Security implements RFC 6143 §7.2 Security Types.
 
-See http://tools.ietf.org/html/rfc6143#section-7.2.2 for more info.
+See http://tools.ietf.org/html/rfc6143#section-7.2 for more info.
 */
 package vnc
 
@@ -12,7 +11,35 @@ import (
 	"net"
 )
 
-// ClientAuthVNC is the standard password authentication
+const (
+	secTypeInvalid = iota
+	secTypeNone
+	secTypeVNCAuth
+)
+
+// ClientAuth implements a method of authenticating with a remote server.
+type ClientAuth interface {
+	// SecurityType returns the byte identifier sent by the server to
+	// identify this authentication scheme.
+	SecurityType() uint8
+
+	// Handshake is called when the authentication handshake should be
+	// performed, as part of the general RFB handshake. (see 7.1.2)
+	Handshake(net.Conn) error
+}
+
+// ClientAuthNone is the "none" authentication. See 7.1.2
+type ClientAuthNone struct{}
+
+func (*ClientAuthNone) SecurityType() uint8 {
+	return secTypeNone
+}
+
+func (*ClientAuthNone) Handshake(net.Conn) error {
+	return nil
+}
+
+// ClientAuthVNC is the standard password authentication.
 type ClientAuthVNC struct {
 	Password string
 }

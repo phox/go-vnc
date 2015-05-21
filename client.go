@@ -1,8 +1,23 @@
 /*
-Package vnc implements a VNC client.
+Initialization implements RFC 6143 §7.5 Client-to-Server Messages.
 
-References:
-  [PROTOCOL]: http://tools.ietf.org/html/rfc6143
+See http://tools.ietf.org/html/rfc6143#section-7.5 for more info.
+
+Sample usage:
+
+// Move mouse to x=100, y=200.
+x, y := 100, 200
+conn.PointerEvent(vnc.ButtonNone, x, y)
+// Give mouse some time to "settle."
+time.Sleep(10*time.Millisecond)
+// Left click.
+conn.PointerEvent(vnc.ButtonLeft, x, y)
+conn.PointerEvent(vnc.ButtonNone, x, y)
+
+// Press return key
+conn.KeyEvent(vnc.KeyReturn, true)
+// Release the key.
+conn.KeyEvent(vnc.KeyReturn, false)
 */
 package vnc
 
@@ -10,150 +25,74 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
-	"io"
-	"net"
 	"unicode"
 )
 
-// The ClientConn type holds client connection information.
-type ClientConn struct {
-	c               net.Conn
-	config          *ClientConfig
-	protocolVersion string
+const (
+	setPixelFormatMsg = iota
+	setEncodingsMsg
+	framebufferUpdateRequestMsg
+	keyEventMsg
+	pointerEventMsg
+	clientCutTextMsg
+)
 
-	// If the pixel format uses a color map, then this is the color
-	// map that is used. This should not be modified directly, since
-	// the data comes from the server.
-	ColorMap [256]Color
-
-	// Encodings supported by the client. This should not be modified
-	// directly. Instead, SetEncodings should be used.
-	Encs []Encoding
-
-	// Width of the frame buffer in pixels, sent from the server.
-	FrameBufferWidth uint16
-
-	// Height of the frame buffer in pixels, sent from the server.
-	FrameBufferHeight uint16
-
-	// Name associated with the desktop, sent from the server.
-	DesktopName string
-
-	// The pixel format associated with the connection. This shouldn't
-	// be modified. If you wish to set a new pixel format, use the
-	// SetPixelFormat method.
-	PixelFormat PixelFormat
-}
-
-// A ClientConfig structure is used to configure a ClientConn. After
-// one has been passed to initialize a connection, it must not be modified.
-type ClientConfig struct {
-	// A slice of ClientAuth methods. Only the first instance that is
-	// suitable by the server will be used to authenticate.
-	Auth []ClientAuth
-
-	// Password for servers that require authentication.
-	Password string
-
-	// Exclusive determines whether the connection is shared with other
-	// clients. If true, then all other clients connected will be
-	// disconnected when a connection is established to the VNC server.
-	Exclusive bool
-
-	// The channel that all messages received from the server will be
-	// sent on. If the channel blocks, then the goroutine reading data
-	// from the VNC server may block indefinitely. It is up to the user
-	// of the library to ensure that this channel is properly read.
-	// If this is not set, then all messages will be discarded.
-	ServerMessageCh chan<- ServerMessage
-
-	// A slice of supported messages that can be read from the server.
-	// This only needs to contain NEW server messages, and doesn't
-	// need to explicitly contain the RFC-required messages.
-	ServerMessages []ServerMessage
-}
-
-func NewClientConfig(p string) *ClientConfig {
-	return &ClientConfig{
-		Auth:     []ClientAuth{&ClientAuthNone{}, &ClientAuthVNC{p}},
-		Password: p,
-	}
-}
-
-func Client(c net.Conn, cfg *ClientConfig) (*ClientConn, error) {
-	conn := &ClientConn{
-		c:      c,
-		config: cfg,
-	}
-
-	if err := conn.protocolVersionHandshake(); err != nil {
-		conn.Close()
-		return nil, err
-	}
-	if err := conn.securityHandshake(); err != nil {
-		conn.Close()
-		return nil, err
-	}
-	if err := conn.securityResultHandshake(); err != nil {
-		conn.Close()
-		return nil, err
-	}
-	if err := conn.clientInit(); err != nil {
-		conn.Close()
-		return nil, err
-	}
-	if err := conn.serverInit(); err != nil {
-		conn.Close()
-		return nil, err
-	}
-
-	go conn.mainLoop()
-
-	return conn, nil
-}
-
-func (c *ClientConn) Close() error {
-	return c.c.Close()
-}
-
-// CutText tells the server that the client has new text in its cut buffer.
-// The text string MUST only contain Latin-1 characters. This encoding
-// is compatible with Go's native string format, but can only use up to
-// unicode.MaxLatin values.
+// SetPixelFormat sets the format in which pixel values should be sent
+// in FramebufferUpdate messages from the server.
 //
-// See RFC 6143 Section 7.5.6
-func (c *ClientConn) CutText(text string) error {
-	var buf bytes.Buffer
+// See RFC 6143 Section 7.5.1
+func (c *ClientConn) SetPixelFormat(format *PixelFormat) error {
+	var keyEvent [20]byte
+	keyEvent[0] = 0
 
-	// This is the fixed size data we'll send
-	fixedData := []interface{}{
-		uint8(6),
-		uint8(0),
-		uint8(0),
-		uint8(0),
-		uint32(len(text)),
+	pfBytes, err := writePixelFormat(format)
+	if err != nil {
+		return err
 	}
 
-	for _, val := range fixedData {
+	// Copy the pixel format bytes into the proper slice location
+	copy(keyEvent[4:], pfBytes)
+
+	// Send the data down the connection
+	if _, err := c.c.Write(keyEvent[:]); err != nil {
+		return err
+	}
+
+	// Reset the color map as according to RFC.
+	var newColorMap [256]Color
+	c.ColorMap = newColorMap
+
+	return nil
+}
+
+// SetEncodings sets the encoding types in which the pixel data can
+// be sent from the server. After calling this method, the encs slice
+// given should not be modified.
+//
+// See RFC 6143 Section 7.5.2
+func (c *ClientConn) SetEncodings(encs []Encoding) error {
+	data := make([]interface{}, 3+len(encs))
+	data[0] = uint8(2)
+	data[1] = uint8(0)
+	data[2] = uint16(len(encs))
+
+	for i, enc := range encs {
+		data[3+i] = int32(enc.Type())
+	}
+
+	var buf bytes.Buffer
+	for _, val := range data {
 		if err := binary.Write(&buf, binary.BigEndian, val); err != nil {
 			return err
 		}
 	}
 
-	for _, char := range text {
-		if char > unicode.MaxLatin1 {
-			return fmt.Errorf("Character '%s' is not valid Latin-1", char)
-		}
-
-		if err := binary.Write(&buf, binary.BigEndian, uint8(char)); err != nil {
-			return err
-		}
-	}
-
-	dataLength := 8 + len(text)
+	dataLength := 4 + (4 * len(encs))
 	if _, err := c.c.Write(buf.Bytes()[0:dataLength]); err != nil {
 		return err
 	}
+
+	c.Encs = encs
 
 	return nil
 }
@@ -248,354 +187,206 @@ func (c *ClientConn) PointerEvent(mask ButtonMask, x, y uint16) error {
 	return nil
 }
 
-// SetEncodings sets the encoding types in which the pixel data can
-// be sent from the server. After calling this method, the encs slice
-// given should not be modified.
+// ClientCutText tells the server that the client has new text in its cut buffer.
+// The text string MUST only contain Latin-1 characters. This encoding
+// is compatible with Go's native string format, but can only use up to
+// unicode.MaxLatin values.
 //
-// See RFC 6143 Section 7.5.2
-func (c *ClientConn) SetEncodings(encs []Encoding) error {
-	data := make([]interface{}, 3+len(encs))
-	data[0] = uint8(2)
-	data[1] = uint8(0)
-	data[2] = uint16(len(encs))
+// See RFC 6143 Section 7.5.6
+func (c *ClientConn) ClientCutText(text string) error {
+	var buf bytes.Buffer
 
-	for i, enc := range encs {
-		data[3+i] = int32(enc.Type())
+	// This is the fixed size data we'll send
+	fixedData := []interface{}{
+		uint8(6),
+		uint8(0),
+		uint8(0),
+		uint8(0),
+		uint32(len(text)),
 	}
 
-	var buf bytes.Buffer
-	for _, val := range data {
+	for _, val := range fixedData {
 		if err := binary.Write(&buf, binary.BigEndian, val); err != nil {
 			return err
 		}
 	}
 
-	dataLength := 4 + (4 * len(encs))
+	for _, char := range text {
+		if char > unicode.MaxLatin1 {
+			return fmt.Errorf("Character '%s' is not valid Latin-1", char)
+		}
+
+		if err := binary.Write(&buf, binary.BigEndian, uint8(char)); err != nil {
+			return err
+		}
+	}
+
+	dataLength := 8 + len(text)
 	if _, err := c.c.Write(buf.Bytes()[0:dataLength]); err != nil {
 		return err
 	}
 
-	c.Encs = encs
-
 	return nil
 }
 
-// SetPixelFormat sets the format in which pixel values should be sent
-// in FramebufferUpdate messages from the server.
 //
-// See RFC 6143 Section 7.5.1
-func (c *ClientConn) SetPixelFormat(format *PixelFormat) error {
-	var keyEvent [20]byte
-	keyEvent[0] = 0
+// Constants to use for KeyEvents PointerEvents.
+//
 
-	pfBytes, err := writePixelFormat(format)
-	if err != nil {
-		return err
-	}
+// ButtonMask represents a mask of pointer presses/releases.
+type ButtonMask uint8
 
-	// Copy the pixel format bytes into the proper slice location
-	copy(keyEvent[4:], pfBytes)
-
-	// Send the data down the connection
-	if _, err := c.c.Write(keyEvent[:]); err != nil {
-		return err
-	}
-
-	// Reset the color map as according to RFC.
-	var newColorMap [256]Color
-	c.ColorMap = newColorMap
-
-	return nil
-}
-
-const pvLen = 12 // ProtocolVersion message length.
-
-func parseProtocolVersion(pv []byte) (uint, uint, error) {
-	var major, minor uint
-
-	if len(pv) < pvLen {
-		return 0, 0, fmt.Errorf("ProtocolVersion message too short (%v < %v)", len(pv), pvLen)
-	}
-
-	l, err := fmt.Sscanf(string(pv), "RFB %d.%d\n", &major, &minor)
-	if l != 2 {
-		return 0, 0, fmt.Errorf("error parsing ProtocolVersion.")
-	}
-	if err != nil {
-		return 0, 0, err
-	}
-
-	return major, minor, nil
-}
-
+// All available button mask components.
 const (
-	// Client ProtocolVersions.
-	PROTO_VERS_UNSUP = "UNSUPPORTED"
-	PROTO_VERS_3_3   = "RFB 003.003\n"
-	PROTO_VERS_3_8   = "RFB 003.008\n"
+	ButtonLeft ButtonMask = 1 << iota
+	ButtonMiddle
+	ButtonRight
+	Button4
+	Button5
+	Button6
+	Button7
+	Button8
+	ButtonNone = ButtonMask(0)
 )
 
-// protocolVersionHandshake implements §7.1.1 ProtocolVersion Handshake.
-func (c *ClientConn) protocolVersionHandshake() error {
-	var protocolVersion [pvLen]byte
+// Latin 1 (byte 3 = 0)
+// ISO/IEC 8859-1 = Unicode U+0020..U+00FF
+const (
+	KeySpace = iota + 0x0020
+	KeyExclam
+	KeyQuoteDbl
+	KeyNumberSign
+	KeyDollar
+	KeyPercent
+	KeyAmpersand
+	KeyApostrophe
+	KeyParenLeft
+	KeyParenRight
+	KeyAsterisk
+	KeyPlus
+	KeyComma
+	KeyMinus
+	KeyPeriod
+	KeySlash
+	Key0
+	Key1
+	Key2
+	Key3
+	Key4
+	Key5
+	Key6
+	Key7
+	Key8
+	Key9
+	KeyColon
+	KeySemicolon
+	KeyLess
+	KeyEqual
+	KeyGreater
+	KeyQuestion
+	KeyAt
+	KeyA
+	KeyB
+	KeyC
+	KeyD
+	KeyE
+	KeyF
+	KeyG
+	KeyH
+	KeyI
+	KeyJ
+	KeyK
+	KeyL
+	KeyM
+	KeyN
+	KeyO
+	KeyP
+	KeyQ
+	KeyR
+	KeyS
+	KeyT
+	KeyU
+	KeyV
+	KeyW
+	KeyX
+	KeyY
+	KeyZ
+	KeyBracketLeft
+	KeyBackslash
+	KeyBracketRight
+	KeyAsciiCircum
+	KeyUnderscore
+	KeyGrave
+	Keya
+	Keyb
+	Keyc
+	Keyd
+	Keye
+	Keyf
+	Keyg
+	Keyh
+	Keyi
+	Keyj
+	Keyk
+	Keyl
+	Keym
+	Keyn
+	Keyo
+	Keyp
+	Keyq
+	Keyr
+	Keys
+	Keyt
+	Keyu
+	Keyv
+	Keyw
+	Keyx
+	Keyy
+	Keyz
+	KeyBraceLeft
+	KeyBar
+	KeyBraceRight
+	KeyAsciiTilde
+)
+const (
+	KeyBackspace = iota + 0xff08
+	KeyTab
+	KeyLinefeed
+	KeyClear
+	_
+	KeyReturn
+)
+const (
+	KeyPause      = 0xff13
+	KeyScrollLock = 0xff14
+	KeySysReq     = 0xff15
+	KeyEscape     = 0xff1b
+)
+const (
+	KeyF1 = iota + 0xffbe
+	KeyF2
+	KeyF3
+	KeyF4
+	KeyF5
+	KeyF6
+	KeyF7
+	KeyF8
+	KeyF9
+	KeyF10
+	KeyF11
+	KeyF12
+)
+const (
+	KeyShiftLeft = iota + 0xffe1
+	KeyShiftRight
+	KeyControlLeft
+	KeyControlRight
+	KeyCapsLock
+	_
+	_
+	_
+	KeyAltLeft
+	KeyAltRight
 
-	// Read the ProtocolVersion message sent by the server.
-	if _, err := io.ReadFull(c.c, protocolVersion[:]); err != nil {
-		return err
-	}
-
-	major, minor, err := parseProtocolVersion(protocolVersion[:])
-	if err != nil {
-		return err
-	}
-	pv := PROTO_VERS_UNSUP
-	if major == 3 {
-		if minor >= 8 {
-			pv = PROTO_VERS_3_8
-		} else if minor >= 3 {
-			pv = PROTO_VERS_3_3
-		}
-	}
-	if pv == PROTO_VERS_UNSUP {
-		return NewVNCError(fmt.Sprintf("ProtocolVersion handshake failed; unsupported version '%v'", string(protocolVersion[:])))
-	}
-	c.protocolVersion = pv
-
-	// Respond with the version we will support
-	if _, err = c.c.Write([]byte(pv)); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// securityHandshake implements §7.1.2 Security Handshake.
-func (c *ClientConn) securityHandshake() error {
-
-	switch c.protocolVersion {
-	case PROTO_VERS_3_3:
-		err := c.securityHandshake33()
-		if err != nil {
-			return err
-		}
-	case PROTO_VERS_3_8:
-		err := c.securityHandshake38()
-		if err != nil {
-			return err
-		}
-	default:
-		return NewVNCError(fmt.Sprintf("Security handshake failed; unsupported protocol"))
-	}
-	return nil
-}
-
-func (c *ClientConn) securityHandshake33() error {
-	var secType uint32
-	if err := binary.Read(c.c, binary.BigEndian, &secType); err != nil {
-		return err
-	}
-
-	var auth ClientAuth
-	switch secType {
-	case secTypeInvalid: // Connection failed.
-		reason, err := c.readErrorReason()
-		if err != nil {
-			return err
-		}
-		return NewVNCError(fmt.Sprintf("Security handshake failed; connection failed: %s", reason))
-	case secTypeNone:
-		auth = &ClientAuthNone{}
-	case secTypeVNCAuth:
-		auth = &ClientAuthVNC{c.config.Password}
-	default:
-		return NewVNCError(fmt.Sprintf("Security handshake failed; invalid security type: %v", secType))
-	}
-	if err := auth.Handshake(c.c); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-func (c *ClientConn) securityHandshake38() error {
-	// Determine server supported security types.
-	var numSecurityTypes uint8
-	if err := binary.Read(c.c, binary.BigEndian, &numSecurityTypes); err != nil {
-		return err
-	}
-	if numSecurityTypes == 0 {
-		reason, err := c.readErrorReason()
-		if err != nil {
-			return err
-		}
-		return NewVNCError(fmt.Sprintf("Security handshake failed; no security types: %v", reason))
-	}
-	securityTypes := make([]uint8, numSecurityTypes)
-	if err := binary.Read(c.c, binary.BigEndian, &securityTypes); err != nil {
-		return err
-	}
-
-	// Choose client security type.
-	// TODO(kward): try "better" security types first.
-	var auth ClientAuth
-FindAuth:
-	for _, securityType := range securityTypes {
-		for _, a := range c.config.Auth {
-			if a.SecurityType() == securityType {
-				// We use the first matching supported authentication.
-				auth = a
-				break FindAuth
-			}
-		}
-	}
-	if auth == nil {
-		return NewVNCError(fmt.Sprintf("Security handshake failed; no suitable auth schemes found; server supports: %#v", securityTypes))
-	}
-	if err := binary.Write(c.c, binary.BigEndian, auth.SecurityType()); err != nil {
-		return err
-	}
-
-	if err := auth.Handshake(c.c); err != nil {
-		return err
-	}
-	return nil
-}
-
-// securityResultHandshake implements §7.1.3 SecurityResult Handshake.
-func (c *ClientConn) securityResultHandshake() error {
-	if c.protocolVersion == PROTO_VERS_3_3 {
-		// Not required for 3.3.
-		return nil
-	}
-
-	var securityResult uint32
-	if err := binary.Read(c.c, binary.BigEndian, &securityResult); err != nil {
-		return err
-	}
-	if securityResult == 1 {
-		reason, err := c.readErrorReason()
-		if err != nil {
-			return err
-		}
-		return NewVNCError(fmt.Sprintf("SecurityResult handshake failed: %s", reason))
-	}
-	return nil
-}
-
-// clientInit implements §7.3.1 ClientInit.
-func (c *ClientConn) clientInit() error {
-	var sharedFlag uint8
-
-	if !c.config.Exclusive {
-		sharedFlag = 1
-	}
-	if err := binary.Write(c.c, binary.BigEndian, sharedFlag); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-// serverInit implements §7.3.2 ServerInit.
-func (c *ClientConn) serverInit() error {
-	if err := binary.Read(c.c, binary.BigEndian, &c.FrameBufferWidth); err != nil {
-		return err
-	}
-	if err := binary.Read(c.c, binary.BigEndian, &c.FrameBufferHeight); err != nil {
-		return err
-	}
-	if err := readPixelFormat(c.c, &c.PixelFormat); err != nil {
-		return err
-	}
-
-	var nameLength uint32
-	if err := binary.Read(c.c, binary.BigEndian, &nameLength); err != nil {
-		return err
-	}
-	nameBytes := make([]uint8, nameLength)
-	if err := binary.Read(c.c, binary.BigEndian, &nameBytes); err != nil {
-		return err
-	}
-	c.DesktopName = string(nameBytes)
-
-	return nil
-}
-
-// mainLoop reads messages sent from the server and routes them to the
-// proper channels for users of the client to read.
-func (c *ClientConn) mainLoop() {
-	defer c.Close()
-
-	// Build the map of available server messages
-	typeMap := make(map[uint8]ServerMessage)
-
-	defaultMessages := []ServerMessage{
-		new(FramebufferUpdateMessage),
-		new(SetColorMapEntriesMessage),
-		new(BellMessage),
-		new(ServerCutTextMessage),
-	}
-
-	for _, msg := range defaultMessages {
-		typeMap[msg.Type()] = msg
-	}
-
-	if c.config.ServerMessages != nil {
-		for _, msg := range c.config.ServerMessages {
-			typeMap[msg.Type()] = msg
-		}
-	}
-
-	for {
-		var messageType uint8
-		if err := binary.Read(c.c, binary.BigEndian, &messageType); err != nil {
-			break
-		}
-
-		msg, ok := typeMap[messageType]
-		if !ok {
-			// Unsupported message type! Bad!
-			break
-		}
-
-		parsedMsg, err := msg.Read(c, c.c)
-		if err != nil {
-			break
-		}
-
-		if c.config.ServerMessageCh == nil {
-			continue
-		}
-
-		c.config.ServerMessageCh <- parsedMsg
-	}
-}
-
-// TODO(kward): need a context for timeout
-func (c *ClientConn) readErrorReason() (string, error) {
-	var reasonLen uint32
-	if err := binary.Read(c.c, binary.BigEndian, &reasonLen); err != nil {
-		return "", err
-	}
-
-	reason := make([]uint8, reasonLen)
-	if err := binary.Read(c.c, binary.BigEndian, &reason); err != nil {
-		return "", err
-	}
-
-	return string(reason), nil
-}
-
-// VNCError implements error interface.
-type VNCError struct {
-	s string
-}
-
-// NewVNCError returns a custom VNCError error.
-func NewVNCError(s string) error {
-	return &VNCError{s}
-}
-
-func (e VNCError) Error() string {
-	return e.s
-}
+	KeyDelete = 0xffff
+)
