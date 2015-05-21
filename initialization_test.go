@@ -48,16 +48,16 @@ func TestServerInit(t *testing.T) {
 	tests := []struct {
 		eof               int
 		fbWidth, fbHeight uint16
-		pixelFormat       [16]byte // TODO(kward): replace with PixelFormat
+		pixelFormat       PixelFormat
 		desktopName       string
 	}{
 		// Valid protocol.
-		{dn, 100, 200, [16]byte{}, "foo"},
+		{dn, 100, 200, NewPixelFormat(), "foo"},
 		// Invalid protocol (missing fields).
 		{eof: none},
 		{eof: fbw, fbWidth: 1},
 		{eof: fbh, fbWidth: 2, fbHeight: 1},
-		{eof: pf, fbWidth: 3, fbHeight: 2, pixelFormat: [16]byte{}},
+		{eof: pf, fbWidth: 3, fbHeight: 2, pixelFormat: NewPixelFormat()},
 	}
 
 	mockConn := &MockConn{}
@@ -79,7 +79,8 @@ func TestServerInit(t *testing.T) {
 			}
 		}
 		if tt.eof >= pf {
-			if err := binary.Write(conn.c, binary.BigEndian, tt.pixelFormat); err != nil {
+			pfBytes, _ := tt.pixelFormat.Bytes()
+			if err := binary.Write(conn.c, binary.BigEndian, pfBytes); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -110,7 +111,9 @@ func TestServerInit(t *testing.T) {
 		if conn.FrameBufferHeight != tt.fbHeight {
 			t.Errorf("serverInit() FrameBufferHeight: got = %v, want = %v", conn.FrameBufferHeight, tt.fbHeight)
 		}
-		// TODO(kward): add test for PixelFormat.
+		if !equalPixelFormat(conn.PixelFormat, tt.pixelFormat) {
+			t.Errorf("serverInit() PixelFormat: got = %v, want = %v", conn.PixelFormat, tt.pixelFormat)
+		}
 		if conn.DesktopName != tt.desktopName {
 			t.Errorf("serverInit() DesktopName: got = %v, want = %v", conn.DesktopName, tt.desktopName)
 		}

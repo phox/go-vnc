@@ -38,7 +38,7 @@ func (*RawEncoding) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding,
 	pixelBytes := make([]uint8, bytesPerPixel)
 
 	var byteOrder binary.ByteOrder = binary.LittleEndian
-	if c.PixelFormat.BigEndian {
+	if c.PixelFormat.BigEndian == rfbTrue {
 		byteOrder = binary.BigEndian
 	}
 
@@ -60,7 +60,7 @@ func (*RawEncoding) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding,
 			}
 
 			color := &colors[int(y)*int(rect.Width)+int(x)]
-			if c.PixelFormat.TrueColor {
+			if c.PixelFormat.TrueColor == rfbTrue {
 				color.R = uint16((rawPixel >> c.PixelFormat.RedShift) & uint32(c.PixelFormat.RedMax))
 				color.G = uint16((rawPixel >> c.PixelFormat.GreenShift) & uint32(c.PixelFormat.GreenMax))
 				color.B = uint16((rawPixel >> c.PixelFormat.BlueShift) & uint32(c.PixelFormat.BlueMax))

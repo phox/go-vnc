@@ -62,8 +62,8 @@ func (*FramebufferUpdate) Read(c *ClientConn, r io.Reader) (ServerMessage, error
 
 	// Build the map of encodings supported
 	encMap := make(map[int32]Encoding)
-	for _, enc := range c.Encs {
-		encMap[enc.Type()] = enc
+	for _, e := range c.Encodings {
+		encMap[e.Type()] = e
 	}
 
 	// We must always support the raw encoding

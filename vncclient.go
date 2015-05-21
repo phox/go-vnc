@@ -25,7 +25,7 @@ type ClientConn struct {
 
 	// Encodings supported by the client. This should not be modified
 	// directly. Instead, SetEncodings should be used.
-	Encs []Encoding
+	Encodings []Encoding
 
 	// Width of the frame buffer in pixels, sent from the server.
 	FrameBufferWidth uint16

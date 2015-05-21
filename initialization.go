@@ -31,7 +31,7 @@ func (c *ClientConn) serverInit() error {
 	if err := binary.Read(c.c, binary.BigEndian, &c.FrameBufferHeight); err != nil {
 		return err
 	}
-	if err := readPixelFormat(c.c, &c.PixelFormat); err != nil {
+	if err := c.PixelFormat.Write(c.c); err != nil {
 		return err
 	}
 

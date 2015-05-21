@@ -29,7 +29,7 @@ import (
 )
 
 const (
-	setPixelFormatMsg = iota
+	setPixelFormatMsg = uint8(iota)
 	_
 	setEncodingsMsg
 	framebufferUpdateRequestMsg
@@ -42,27 +42,34 @@ const (
 // in FramebufferUpdate messages from the server.
 //
 // See RFC 6143 Section 7.5.1
-func (c *ClientConn) SetPixelFormat(format *PixelFormat) error {
-	var keyEvent [20]byte
-	keyEvent[0] = 0
+func (c *ClientConn) SetPixelFormat(pf PixelFormat) error {
+	var buf bytes.Buffer
 
-	pfBytes, err := writePixelFormat(format)
+	// message-type
+	if err := binary.Write(&buf, binary.BigEndian, setPixelFormatMsg); err != nil {
+		return err
+	}
+	//padding
+	padding := [3]byte{}
+	buf.Write(padding[:])
+	// pixel-format
+	pfBytes, err := pf.Bytes()
 	if err != nil {
 		return err
 	}
+	buf.Write(pfBytes)
 
-	// Copy the pixel format bytes into the proper slice location
-	copy(keyEvent[4:], pfBytes)
-
-	// Send the data down the connection
-	if _, err := c.c.Write(keyEvent[:]); err != nil {
+	// Send the data down the connection.
+	if _, err := c.c.Write(buf.Bytes()); err != nil {
 		return err
 	}
 
-	// Reset the color map as according to RFC.
-	var newColorMap [256]Color
-	c.ColorMap = newColorMap
+	// Invalidate the color map.
+	if pf.TrueColor == rfbFalse {
+		c.ColorMap = [256]Color{}
+	}
 
+	c.PixelFormat = pf
 	return nil
 }
 
@@ -71,30 +78,33 @@ func (c *ClientConn) SetPixelFormat(format *PixelFormat) error {
 // given should not be modified.
 //
 // See RFC 6143 Section 7.5.2
-func (c *ClientConn) SetEncodings(encs []Encoding) error {
-	data := make([]interface{}, 3+len(encs))
-	data[0] = uint8(setEncodingsMsg)
-	data[1] = uint8(0)
-	data[2] = uint16(len(encs))
-
-	for i, enc := range encs {
-		data[3+i] = int32(enc.Type())
-	}
-
+func (c *ClientConn) SetEncodings(e []Encoding) error {
 	var buf bytes.Buffer
-	for _, val := range data {
-		if err := binary.Write(&buf, binary.BigEndian, val); err != nil {
+
+	// message-type
+	if err := binary.Write(&buf, binary.BigEndian, setEncodingsMsg); err != nil {
+		return err
+	}
+	// padding
+	padding := [1]byte{}
+	buf.Write(padding[:])
+	// number-of-encodings
+	if err := binary.Write(&buf, binary.BigEndian, uint16(len(e))); err != nil {
+		return err
+	}
+	// encoding-type
+	for _, v := range e {
+		if err := binary.Write(&buf, binary.BigEndian, int32(v.Type())); err != nil {
 			return err
 		}
 	}
 
-	dataLength := 4 + (4 * len(encs))
-	if _, err := c.c.Write(buf.Bytes()[0:dataLength]); err != nil {
+	// Send the data down the connection.
+	if _, err := c.c.Write(buf.Bytes()); err != nil {
 		return err
 	}
 
-	c.Encs = encs
-
+	c.Encodings = e
 	return nil
 }
 
