@@ -65,7 +65,7 @@ func (c *ClientConn) SetPixelFormat(pf PixelFormat) error {
 	}
 
 	// Invalidate the color map.
-	if pf.TrueColor == rfbFalse {
+	if pf.TrueColor == RFBFalse {
 		c.ColorMap = [256]Color{}
 	}
 
@@ -108,34 +108,21 @@ func (c *ClientConn) SetEncodings(e []Encoding) error {
 	return nil
 }
 
+type FramebufferUpdateRequestType struct {
+	Msg, Inc            uint8
+	X, Y, Width, Height uint16
+}
+
 // Requests a framebuffer update from the server. There may be an indefinite
 // time between the request and the actual framebuffer update being
 // received.
 //
 // See RFC 6143 Section 7.5.3
-func (c *ClientConn) FramebufferUpdateRequest(incremental bool, x, y, width, height uint16) error {
-	var buf bytes.Buffer
-	var incrementalByte uint8
-
-	if incremental {
-		incrementalByte = 1
-	}
-
-	data := []interface{}{
-		uint8(framebufferUpdateMsg),
-		incrementalByte,
-		x, y, width, height,
-	}
-
-	for _, val := range data {
-		if err := binary.Write(&buf, binary.BigEndian, val); err != nil {
-			return err
-		}
-	}
-	if _, err := c.c.Write(buf.Bytes()[0:10]); err != nil {
+func (c *ClientConn) FramebufferUpdateRequest(inc uint8, x, y, w, h uint16) error {
+	req := FramebufferUpdateRequestType{framebufferUpdateRequestMsg, inc, x, y, w, h}
+	if err := binary.Write(c.c, binary.BigEndian, &req); err != nil {
 		return err
 	}
-
 	return nil
 }
 
@@ -152,7 +139,7 @@ func (c *ClientConn) KeyEvent(keysym uint32, down bool) error {
 	}
 
 	data := []interface{}{
-		uint8(keyEventMsg),
+		keyEventMsg,
 		downFlag,
 		uint8(0),
 		uint8(0),
@@ -179,7 +166,7 @@ func (c *ClientConn) PointerEvent(mask ButtonMask, x, y uint16) error {
 	var buf bytes.Buffer
 
 	data := []interface{}{
-		uint8(pointerEventMsg),
+		pointerEventMsg,
 		uint8(mask),
 		x,
 		y,
@@ -209,7 +196,7 @@ func (c *ClientConn) ClientCutText(text string) error {
 
 	// This is the fixed size data we'll send
 	fixedData := []interface{}{
-		uint8(clientCutTextMsg),
+		clientCutTextMsg,
 		uint8(0),
 		uint8(0),
 		uint8(0),
