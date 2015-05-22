@@ -14,7 +14,7 @@ func TestSetEncodings(t *testing.T) {
 		encs     []Encoding
 		encTypes []int32
 	}{
-		{[]Encoding{&RawEncoding{}}, []int32{0}},
+		{[]Encoding{NewRawEncoding([]Color{})}, []int32{0}},
 	}
 
 	mockConn := &MockConn{}

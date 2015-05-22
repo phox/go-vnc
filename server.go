@@ -37,11 +37,23 @@ type FramebufferUpdate struct {
 
 // Rectangle represents a rectangle of pixel data.
 type Rectangle struct {
-	X      uint16
-	Y      uint16
-	Width  uint16
-	Height uint16
-	Enc    Encoding
+	X, Y, Width, Height uint16
+	Enc                 Encoding
+}
+
+type FramebufferUpdateMsg struct {
+	Msg     uint8
+	Pad     [1]byte
+	NumRect uint16
+	Rects   []Rectangle
+}
+
+func NewFramebufferUpdateMsg(rects []Rectangle) FramebufferUpdateMsg {
+	return FramebufferUpdateMsg{
+		Msg:     framebufferUpdateMsg,
+		NumRect: uint16(len(rects)),
+		Rects:   rects,
+	}
 }
 
 func (*FramebufferUpdate) Type() uint8 {
@@ -67,8 +79,7 @@ func (*FramebufferUpdate) Read(c *ClientConn, r io.Reader) (ServerMessage, error
 	}
 
 	// We must always support the raw encoding
-	rawEnc := new(RawEncoding)
-	encMap[rawEnc.Type()] = rawEnc
+	encMap[rawEnc] = NewRawEncoding([]Color{})
 
 	rects := make([]Rectangle, numRects)
 	for i := uint16(0); i < numRects; i++ {
@@ -82,13 +93,11 @@ func (*FramebufferUpdate) Read(c *ClientConn, r io.Reader) (ServerMessage, error
 			&rect.Height,
 			&encodingType,
 		}
-
 		for _, val := range data {
 			if err := binary.Read(r, binary.BigEndian, val); err != nil {
 				return nil, err
 			}
 		}
-
 		enc, ok := encMap[encodingType]
 		if !ok {
 			return nil, fmt.Errorf("unsupported encoding type: %d", encodingType)

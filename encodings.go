@@ -37,11 +37,16 @@ type Encoding interface {
 //
 // See RFC 6143 Section 7.7.1
 type RawEncoding struct {
+	enc    int32
 	Colors []Color
 }
 
-func (*RawEncoding) Type() int32 {
-	return rawEnc
+func NewRawEncoding(c []Color) *RawEncoding {
+	return &RawEncoding{rawEnc, c}
+}
+
+func (e *RawEncoding) Type() int32 {
+	return e.enc
 }
 
 func (*RawEncoding) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
@@ -81,5 +86,5 @@ func (*RawEncoding) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding,
 		}
 	}
 
-	return &RawEncoding{colors}, nil
+	return NewRawEncoding(colors), nil
 }
