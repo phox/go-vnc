@@ -12,7 +12,7 @@ import (
 )
 
 const (
-	framebufferUpdateMsg = iota
+	framebufferUpdateMsg = uint8(iota)
 	setColorMapEntriesMsg
 	bellMsg
 	serverCutTextMsg
