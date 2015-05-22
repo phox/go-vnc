@@ -73,54 +73,63 @@ func (c *ClientConn) SetPixelFormat(pf PixelFormat) error {
 	return nil
 }
 
-// SetEncodings sets the encoding types in which the pixel data can
-// be sent from the server. After calling this method, the encs slice
-// given should not be modified.
+type SetEncodingsMessage struct {
+	Msg     uint8   // message-type
+	Pad     [1]byte // padding
+	NumEncs uint16  // number-of-encodings
+	Encs    []int32 // encoding-type
+}
+
+// SetEncodings sets the encoding types in which the pixel data can be sent
+// from the server. After calling this method, the encs slice given should not
+// be modified.
 //
 // See RFC 6143 Section 7.5.2
 func (c *ClientConn) SetEncodings(e []Encoding) error {
-	var buf bytes.Buffer
-
-	// message-type
-	if err := binary.Write(&buf, binary.BigEndian, setEncodingsMsg); err != nil {
-		return err
+	// Prepare message.
+	msg := SetEncodingsMessage{
+		Msg:     setEncodingsMsg,
+		NumEncs: uint16(len(e)),
 	}
-	// padding
-	padding := [1]byte{}
-	buf.Write(padding[:])
-	// number-of-encodings
-	if err := binary.Write(&buf, binary.BigEndian, uint16(len(e))); err != nil {
-		return err
-	}
-	// encoding-type
 	for _, v := range e {
-		if err := binary.Write(&buf, binary.BigEndian, int32(v.Type())); err != nil {
+		msg.Encs = append(msg.Encs, int32(v.Type()))
+	}
+
+	// Send message.
+	if err := binary.Write(c.c, binary.BigEndian, &msg.Msg); err != nil {
+		return err
+	}
+	for i := range msg.Pad {
+		if err := binary.Write(c.c, binary.BigEndian, &msg.Pad[i]); err != nil {
 			return err
 		}
 	}
-
-	// Send the data down the connection.
-	if _, err := c.c.Write(buf.Bytes()); err != nil {
+	if err := binary.Write(c.c, binary.BigEndian, &msg.NumEncs); err != nil {
 		return err
 	}
-
+	for i := range msg.Encs {
+		if err := binary.Write(c.c, binary.BigEndian, &msg.Encs[i]); err != nil {
+			return err
+		}
+	}
 	c.Encodings = e
+
 	return nil
 }
 
-type FramebufferUpdateRequestType struct {
+// FramebufferUpdateRequestMessage defines a FramebufferUpdateRequest message.
+type FramebufferUpdateRequestMessage struct {
 	Msg, Inc            uint8
 	X, Y, Width, Height uint16
 }
 
 // Requests a framebuffer update from the server. There may be an indefinite
-// time between the request and the actual framebuffer update being
-// received.
+// time between the request and the actual framebuffer update being received.
 //
 // See RFC 6143 Section 7.5.3
 func (c *ClientConn) FramebufferUpdateRequest(inc uint8, x, y, w, h uint16) error {
-	req := FramebufferUpdateRequestType{framebufferUpdateRequestMsg, inc, x, y, w, h}
-	if err := binary.Write(c.c, binary.BigEndian, &req); err != nil {
+	msg := FramebufferUpdateRequestMessage{framebufferUpdateRequestMsg, inc, x, y, w, h}
+	if err := binary.Write(c.c, binary.BigEndian, &msg); err != nil {
 		return err
 	}
 	return nil
