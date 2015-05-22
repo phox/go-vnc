@@ -10,6 +10,17 @@ import (
 	"io"
 )
 
+const (
+	rawEnc = int32(iota)
+	copyRectEnc
+	rreEnc
+	hextileEnc           = int32(5)
+	trleEnc              = int32(15)
+	zrleEnc              = int32(16)
+	colorPseudoEnc       = int32(-239)
+	desktopSizePseudoEnc = int32(-223)
+)
+
 // An Encoding implements a method for encoding pixel data that is
 // sent by the server to the client.
 type Encoding interface {
@@ -30,7 +41,7 @@ type RawEncoding struct {
 }
 
 func (*RawEncoding) Type() int32 {
-	return 0
+	return rawEnc
 }
 
 func (*RawEncoding) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
