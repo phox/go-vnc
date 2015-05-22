@@ -25,10 +25,10 @@ func (c *ClientConn) clientInit() error {
 
 // serverInit implements §7.3.2 ServerInit.
 func (c *ClientConn) serverInit() error {
-	if err := binary.Read(c.c, binary.BigEndian, &c.FrameBufferWidth); err != nil {
+	if err := binary.Read(c.c, binary.BigEndian, &c.FramebufferWidth); err != nil {
 		return err
 	}
-	if err := binary.Read(c.c, binary.BigEndian, &c.FrameBufferHeight); err != nil {
+	if err := binary.Read(c.c, binary.BigEndian, &c.FramebufferHeight); err != nil {
 		return err
 	}
 	if err := c.PixelFormat.Write(c.c); err != nil {

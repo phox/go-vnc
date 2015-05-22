@@ -15,9 +15,9 @@ func TestPixelFormatBytes(t *testing.T) {
 		//
 		// Valid PixelFormats.
 		//
-		{PixelFormat{BPP: 8, Depth: 8, BigEndian: rfbTrue, TrueColor: rfbFalse},
+		{PixelFormat{BPP: 8, Depth: 8, BigEndian: RFBTrue, TrueColor: RFBFalse},
 			[]uint8{8, 8, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, true},
-		{PixelFormat{BPP: 8, Depth: 16, BigEndian: rfbTrue, TrueColor: rfbFalse},
+		{PixelFormat{BPP: 8, Depth: 16, BigEndian: RFBTrue, TrueColor: RFBFalse},
 			[]uint8{8, 16, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, true},
 		{NewPixelFormat(),
 			[]uint8{16, 16, 1, 1, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0}, true},
@@ -25,13 +25,13 @@ func TestPixelFormatBytes(t *testing.T) {
 		// Invalid PixelFormats.
 		//
 		// BPP invalid
-		{PixelFormat{BPP: 1, Depth: 1, BigEndian: rfbTrue, TrueColor: rfbFalse},
+		{PixelFormat{BPP: 1, Depth: 1, BigEndian: RFBTrue, TrueColor: RFBFalse},
 			[]uint8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, false},
 		// Depth invalid
-		{PixelFormat{BPP: 8, Depth: 1, BigEndian: rfbTrue, TrueColor: rfbFalse},
+		{PixelFormat{BPP: 8, Depth: 1, BigEndian: RFBTrue, TrueColor: RFBFalse},
 			[]uint8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, false},
 		// BPP > Depth
-		{PixelFormat{BPP: 16, Depth: 8, BigEndian: rfbTrue, TrueColor: rfbFalse},
+		{PixelFormat{BPP: 16, Depth: 8, BigEndian: RFBTrue, TrueColor: RFBFalse},
 			[]uint8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, false},
 	}
 
@@ -65,11 +65,11 @@ func TestPixelFormatWrite(t *testing.T) {
 		// Valid PixelFormats.
 		//
 		{[]uint8{8, 8, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			PixelFormat{BPP: 8, Depth: 8, BigEndian: rfbTrue, TrueColor: rfbFalse}, true},
+			PixelFormat{BPP: 8, Depth: 8, BigEndian: RFBTrue, TrueColor: RFBFalse}, true},
 		{[]uint8{8, 16, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			PixelFormat{BPP: 8, Depth: 16, BigEndian: rfbTrue, TrueColor: rfbFalse}, true},
+			PixelFormat{BPP: 8, Depth: 16, BigEndian: RFBTrue, TrueColor: RFBFalse}, true},
 		{[]uint8{32, 32, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			PixelFormat{BPP: 32, Depth: 32, BigEndian: rfbTrue, TrueColor: rfbFalse}, true},
+			PixelFormat{BPP: 32, Depth: 32, BigEndian: RFBTrue, TrueColor: RFBFalse}, true},
 		//
 		//
 		// Invalid PixelFormats.

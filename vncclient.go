@@ -28,10 +28,10 @@ type ClientConn struct {
 	Encodings []Encoding
 
 	// Width of the frame buffer in pixels, sent from the server.
-	FrameBufferWidth uint16
+	FramebufferWidth uint16
 
 	// Height of the frame buffer in pixels, sent from the server.
-	FrameBufferHeight uint16
+	FramebufferHeight uint16
 
 	// Name associated with the desktop, sent from the server.
 	DesktopName string
@@ -119,6 +119,7 @@ func Client(c net.Conn, cfg *ClientConfig) (*ClientConn, error) {
 }
 
 func (c *ClientConn) Close() error {
+	fmt.Println("VNC Client connection closed.")
 	return c.c.Close()
 }
 

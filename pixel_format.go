@@ -13,11 +13,7 @@ import (
 	"math"
 )
 
-const (
-	rfbFalse = uint8(iota)
-	rfbTrue
-	pfSize = 16 // PixelFormat structure size.
-)
+const pfSize = 16 // PixelFormat structure size.
 
 // PixelFormat describes the way a pixel is formatted for a VNC connection.
 type PixelFormat struct {
@@ -36,7 +32,7 @@ type PixelFormat struct {
 
 // NewPixelFormat returns a populated PixelFormat structure.
 func NewPixelFormat() PixelFormat {
-	return PixelFormat{16, 16, rfbTrue, rfbTrue, uint16(math.Exp2(16) - 1), uint16(math.Exp2(16) - 1), uint16(math.Exp2(16) - 1), 0, 0, 0, [3]byte{}}
+	return PixelFormat{16, 16, RFBTrue, RFBTrue, uint16(math.Exp2(16) - 1), uint16(math.Exp2(16) - 1), uint16(math.Exp2(16) - 1), 0, 0, 0, [3]byte{}}
 }
 
 // Bytes returns a slice of the contents of the PixelFormat structure. If there
@@ -75,7 +71,7 @@ func (pf PixelFormat) Bytes() ([]byte, error) {
 	}
 
 	// If TrueColor is true, then populate the structure with the color values.
-	if pf.TrueColor == rfbTrue {
+	if pf.TrueColor == RFBTrue {
 		if err := binary.Write(&buf, binary.BigEndian, pf.RedMax); err != nil {
 			return nil, err
 		}
@@ -115,8 +111,8 @@ func (pf *PixelFormat) Write(r io.Reader) error {
 	if err := binary.Read(r, binary.BigEndian, &pf.TrueColor); err != nil {
 		return err
 	}
-	if pf.TrueColor != rfbFalse {
-		pf.TrueColor = rfbTrue // Convert all non-zero values to our constant value.
+	if pf.TrueColor != RFBFalse {
+		pf.TrueColor = RFBTrue // Convert all non-zero values to our constant value.
 	}
 
 	if err := binary.Read(r, binary.BigEndian, &pf.RedMax); err != nil {

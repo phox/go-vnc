@@ -105,11 +105,11 @@ func TestServerInit(t *testing.T) {
 		if err != nil {
 			t.Fatalf("serverInit() error %v", err)
 		}
-		if conn.FrameBufferWidth != tt.fbWidth {
-			t.Errorf("serverInit() FrameBufferWidth: got = %v, want = %v", conn.FrameBufferWidth, tt.fbWidth)
+		if conn.FramebufferWidth != tt.fbWidth {
+			t.Errorf("serverInit() FramebufferWidth: got = %v, want = %v", conn.FramebufferWidth, tt.fbWidth)
 		}
-		if conn.FrameBufferHeight != tt.fbHeight {
-			t.Errorf("serverInit() FrameBufferHeight: got = %v, want = %v", conn.FrameBufferHeight, tt.fbHeight)
+		if conn.FramebufferHeight != tt.fbHeight {
+			t.Errorf("serverInit() FramebufferHeight: got = %v, want = %v", conn.FramebufferHeight, tt.fbHeight)
 		}
 		if !equalPixelFormat(conn.PixelFormat, tt.pixelFormat) {
 			t.Errorf("serverInit() PixelFormat: got = %v, want = %v", conn.PixelFormat, tt.pixelFormat)
