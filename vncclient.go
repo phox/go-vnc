@@ -78,7 +78,7 @@ func NewClientConfig(p string) *ClientConfig {
 		},
 		Password: p,
 		ServerMessages: []ServerMessage{
-			&FramebufferUpdate{},
+			NewFramebufferUpdateMsg(nil),
 			&SetColorMapEntries{},
 			&Bell{},
 			&ServerCutText{},

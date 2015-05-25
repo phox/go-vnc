@@ -12,10 +12,10 @@ import (
 )
 
 const (
-	framebufferUpdateMsg = uint8(iota)
-	setColorMapEntriesMsg
-	bellMsg
-	serverCutTextMsg
+	FramebufferUpdate = uint8(iota)
+	setColorMapEntries
+	bell
+	serverCutText
 )
 
 // A ServerMessage implements a message sent from the server to the client.
@@ -27,12 +27,6 @@ type ServerMessage interface {
 	// this is called, the message type has already been read from the reader.
 	// This should return a new ServerMessage that is the appropriate type.
 	Read(*ClientConn, io.Reader) (ServerMessage, error)
-}
-
-// FramebufferUpdate consists of a sequence of rectangles of
-// pixel data that the client should put into its framebuffer.
-type FramebufferUpdate struct {
-	Rectangles []Rectangle
 }
 
 // Rectangle represents a rectangle of pixel data.
@@ -48,22 +42,21 @@ type FramebufferUpdateMsg struct {
 	Rects   []Rectangle
 }
 
-func NewFramebufferUpdateMsg(rects []Rectangle) FramebufferUpdateMsg {
-	return FramebufferUpdateMsg{
-		Msg:     framebufferUpdateMsg,
+func NewFramebufferUpdateMsg(rects []Rectangle) *FramebufferUpdateMsg {
+	return &FramebufferUpdateMsg{
+		Msg:     FramebufferUpdate,
 		NumRect: uint16(len(rects)),
 		Rects:   rects,
 	}
 }
 
-func (*FramebufferUpdate) Type() uint8 {
-	return framebufferUpdateMsg
+func (m *FramebufferUpdateMsg) Type() uint8 {
+	return m.Msg
 }
 
-func (*FramebufferUpdate) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
+func (m *FramebufferUpdateMsg) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
 	// Read off the padding
-	var padding [1]byte
-	if _, err := io.ReadFull(r, padding[:]); err != nil {
+	if _, err := io.ReadFull(r, m.Pad[:]); err != nil {
 		return nil, err
 	}
 
@@ -110,7 +103,7 @@ func (*FramebufferUpdate) Read(c *ClientConn, r io.Reader) (ServerMessage, error
 		}
 	}
 
-	return &FramebufferUpdate{rects}, nil
+	return NewFramebufferUpdateMsg(rects), nil
 }
 
 // SetColorMapEntries is sent by the server to set values into
@@ -131,7 +124,7 @@ type SetColorMapEntries struct {
 }
 
 func (*SetColorMapEntries) Type() uint8 {
-	return setColorMapEntriesMsg
+	return setColorMapEntries
 }
 
 func (*SetColorMapEntries) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
@@ -180,7 +173,7 @@ func (*SetColorMapEntries) Read(c *ClientConn, r io.Reader) (ServerMessage, erro
 type Bell struct{}
 
 func (*Bell) Type() uint8 {
-	return bellMsg
+	return bell
 }
 
 func (*Bell) Read(*ClientConn, io.Reader) (ServerMessage, error) {
@@ -195,7 +188,7 @@ type ServerCutText struct {
 }
 
 func (*ServerCutText) Type() uint8 {
-	return serverCutTextMsg
+	return serverCutText
 }
 
 func (*ServerCutText) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {

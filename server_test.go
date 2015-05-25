@@ -57,12 +57,12 @@ func TestFramebufferUpdate(t *testing.T) {
 		if err := binary.Read(conn.c, binary.BigEndian, &messageType); err != nil {
 			t.Fatal(err)
 		}
-		fu := &FramebufferUpdate{}
+		fu := NewFramebufferUpdateMsg([]Rectangle{})
 		parsedFU, err := fu.Read(conn, conn.c)
 		if err != nil {
 			t.Fatalf("FramebufferUpdate() unexpected error %v", err)
 		}
-		rects := parsedFU.(*FramebufferUpdate).Rectangles
+		rects := parsedFU.(*FramebufferUpdateMsg).Rects
 		if got, want := len(rects), len(tt.rects); got != want {
 			t.Errorf("FramebufferUpdate() number of rectangles doesn't match; got = %v, want = %v", got, want)
 		}
