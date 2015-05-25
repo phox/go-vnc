@@ -4,6 +4,6 @@ import (
 	"testing"
 )
 
-func TestRawEncoding(t *testing.T) {
+func TestRawEncodingRead(t *testing.T) {
 	t = nil
 }
