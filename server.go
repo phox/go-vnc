@@ -72,7 +72,7 @@ func (m *FramebufferUpdateMsg) Read(c *ClientConn, r io.Reader) (ServerMessage, 
 	}
 
 	// We must always support the raw encoding
-	encMap[rawEnc] = NewRawEncoding([]Color{})
+	encMap[RawEnc] = NewRawEncoding([]Color{})
 
 	rects := make([]Rectangle, numRects)
 	for i := uint16(0); i < numRects; i++ {

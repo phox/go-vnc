@@ -11,7 +11,7 @@ import (
 )
 
 const (
-	rawEnc = int32(iota)
+	RawEnc = int32(iota)
 	copyRectEnc
 	rreEnc
 	hextileEnc           = int32(5)
@@ -42,7 +42,7 @@ type RawEncoding struct {
 }
 
 func NewRawEncoding(c []Color) *RawEncoding {
-	return &RawEncoding{rawEnc, c}
+	return &RawEncoding{RawEnc, c}
 }
 
 func (e *RawEncoding) Type() int32 {
@@ -59,7 +59,6 @@ func (*RawEncoding) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding,
 	}
 
 	colors := make([]Color, int(rect.Height)*int(rect.Width))
-
 	for y := uint16(0); y < rect.Height; y++ {
 		for x := uint16(0); x < rect.Width; x++ {
 			if _, err := io.ReadFull(r, pixelBytes); err != nil {
