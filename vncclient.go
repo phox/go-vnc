@@ -137,14 +137,11 @@ func (c *ClientConn) mainLoop() error {
 	}
 
 	for {
-		fmt.Println("mainLoop :-)")
-
 		var messageType uint8
 		if err := binary.Read(c.c, binary.BigEndian, &messageType); err != nil {
 			fmt.Println("error: reading from server")
 			break
 		}
-		fmt.Println("messageType:", messageType)
 
 		msg, ok := serverMessages[messageType]
 		if !ok {
@@ -152,7 +149,6 @@ func (c *ClientConn) mainLoop() error {
 			fmt.Printf("error: unsupported message type")
 			break
 		}
-		fmt.Println("message:", msg.Type())
 
 		parsedMsg, err := msg.Read(c, c.c)
 		if err != nil {
