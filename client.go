@@ -370,6 +370,17 @@ const (
 	KeyEscape     = 0xff1b
 )
 const (
+	KeyHome = iota + 0xff50
+	KeyLeft
+	KeyUp
+	KeyRight
+	KeyDown
+	KeyPageUp
+	KeyPageDown
+	KeyEnd
+	KeyInsert = 0xff63
+)
+const (
 	KeyF1 = iota + 0xffbe
 	KeyF2
 	KeyF3
