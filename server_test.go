@@ -22,7 +22,7 @@ func TestFramebufferUpdate(t *testing.T) {
 		mockConn.Reset()
 
 		// Send the message.
-		msg := NewFramebufferUpdateMsg(tt.rects)
+		msg := NewFramebufferUpdateMessage(tt.rects)
 		if err := binary.Write(conn.c, binary.BigEndian, &msg.Msg); err != nil {
 			t.Fatal(err)
 		}
@@ -57,12 +57,12 @@ func TestFramebufferUpdate(t *testing.T) {
 		if err := binary.Read(conn.c, binary.BigEndian, &messageType); err != nil {
 			t.Fatal(err)
 		}
-		fu := NewFramebufferUpdateMsg([]Rectangle{})
+		fu := NewFramebufferUpdateMessage([]Rectangle{})
 		parsedFU, err := fu.Read(conn, conn.c)
 		if err != nil {
 			t.Fatalf("FramebufferUpdate() unexpected error %v", err)
 		}
-		rects := parsedFU.(*FramebufferUpdateMsg).Rects
+		rects := parsedFU.(*FramebufferUpdateMessage).Rects
 		if got, want := len(rects), len(tt.rects); got != want {
 			t.Errorf("FramebufferUpdate() number of rectangles doesn't match; got = %v, want = %v", got, want)
 		}
@@ -86,14 +86,8 @@ func TestFramebufferUpdate(t *testing.T) {
 	}
 }
 
-func TestSetColorMapEntries(t *testing.T) {
-	t = nil
-}
+func TestSetColorMapEntries(t *testing.T) {}
 
-func TestBell(t *testing.T) {
-	t = nil
-}
+func TestBell(t *testing.T) {}
 
-func TestServerCutText(t *testing.T) {
-	t = nil
-}
+func TestServerCutText(t *testing.T) {}

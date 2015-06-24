@@ -10,7 +10,7 @@ This library implements [RFC 6143](http://tools.ietf.org/html/rfc6143).
 The library is installable via standard `go get`. The package name is `vnc`.
 
 ```
-$ go get github.com/mitchellh/go-vnc
+$ go get github.com/kward/go-vnc
 ```
 
-Documentation is available on GoDoc: http://godoc.org/github.com/mitchellh/go-vnc
+Documentation is available on [GoDoc](http://godoc.org/github.com/kward/go-vnc).

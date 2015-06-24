@@ -1,5 +1,5 @@
 /*
-Common provides common things used by multiple source files.
+common.go provides common things used by multiple source files.
 */
 package vnc
 

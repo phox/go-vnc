@@ -70,6 +70,7 @@ type ClientConfig struct {
 	ServerMessages []ServerMessage
 }
 
+// NewClientConfig returns a populated ClientConfig.
 func NewClientConfig(p string) *ClientConfig {
 	return &ClientConfig{
 		Auth: []ClientAuth{
@@ -78,14 +79,15 @@ func NewClientConfig(p string) *ClientConfig {
 		},
 		Password: p,
 		ServerMessages: []ServerMessage{
-			NewFramebufferUpdateMsg(nil),
-			&SetColorMapEntries{},
-			&Bell{},
-			&ServerCutText{},
+			NewFramebufferUpdateMessage(nil),
+			&SetColorMapEntriesMessage{},
+			&BellMessage{},
+			&ServerCutTextMessage{},
 		},
 	}
 }
 
+// Client negotiates a connection to a VNC server.
 func Client(c net.Conn, cfg *ClientConfig) (*ClientConn, error) {
 	conn := &ClientConn{
 		c:      c,
@@ -118,6 +120,7 @@ func Client(c net.Conn, cfg *ClientConfig) (*ClientConn, error) {
 	return conn, nil
 }
 
+// Close a connection to a VNC server.
 func (c *ClientConn) Close() error {
 	fmt.Println("VNC Client connection closed.")
 	return c.c.Close()

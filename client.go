@@ -1,23 +1,6 @@
 /*
-Initialization implements RFC 6143 §7.5 Client-to-Server Messages.
-
+client.go implements RFC 6143 §7.5 Client-to-Server Messages.
 See http://tools.ietf.org/html/rfc6143#section-7.5 for more info.
-
-Sample usage:
-
-// Move mouse to x=100, y=200.
-x, y := 100, 200
-conn.PointerEvent(vnc.ButtonNone, x, y)
-// Give mouse some time to "settle."
-time.Sleep(10*time.Millisecond)
-// Left click.
-conn.PointerEvent(vnc.ButtonLeft, x, y)
-conn.PointerEvent(vnc.ButtonNone, x, y)
-
-// Press return key
-conn.KeyEvent(vnc.KeyReturn, true)
-// Release the key.
-conn.KeyEvent(vnc.KeyReturn, false)
 */
 package vnc
 
@@ -140,7 +123,7 @@ func (c *ClientConn) FramebufferUpdateRequest(inc uint8, x, y, w, h uint16) erro
 // Google to find a reference of these values. To simulate a key press,
 // you must send a key with both a down event, and a non-down event.
 //
-// See 7.5.4.
+// See RFC 6143 Section 7.5.4.
 func (c *ClientConn) KeyEvent(keysym uint32, down bool) error {
 	var downFlag uint8 = 0
 	if down {

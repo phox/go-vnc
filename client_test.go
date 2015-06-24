@@ -2,7 +2,10 @@ package vnc
 
 import (
 	"encoding/binary"
+	"fmt"
+	"net"
 	"testing"
+	"time"
 )
 
 func TestSetPixelFormat(t *testing.T) {
@@ -119,14 +122,57 @@ func TestFramebufferUpdateRequest(t *testing.T) {
 	}
 }
 
-func TestKeyEvent(t *testing.T) {
-	t = nil
+func ExampleClientConn_KeyEvent() {
+	// Establish TCP connection.
+	nc, err := net.DialTimeout("tcp", "127.0.0.1:5900", 10*time.Second)
+	if err != nil {
+		panic(fmt.Sprintf("Error connecting to host: %v\n", err))
+	}
+
+	// Negotiate VNC connection.
+	vc, err := Client(nc, NewClientConfig("somepass"))
+	if err != nil {
+		panic(fmt.Sprintf("Could not negotiate a VNC connection: %v\n", err))
+	}
+
+	// Press and release the return key.
+	vc.KeyEvent(KeyReturn, true)
+	vc.KeyEvent(KeyReturn, false)
+
+	// Close VNC connection.
+	vc.Close()
 }
 
-func TestPointerEvent(t *testing.T) {
-	t = nil
+func TestKeyEvent(t *testing.T) {}
+
+func ExampleClientConn_PointerEvent() {
+	// Establish TCP connection.
+	nc, err := net.DialTimeout("tcp", "127.0.0.1:5900", 10*time.Second)
+	if err != nil {
+		panic(fmt.Sprintf("Error connecting to host: %v\n", err))
+	}
+
+	// Negotiate VNC connection.
+	vc, err := Client(nc, NewClientConfig("somepass"))
+	if err != nil {
+		panic(fmt.Sprintf("Could not negotiate a VNC connection: %v\n", err))
+	}
+
+	// Move mouse to x=100, y=200.
+	x, y := uint16(100), uint16(200)
+	vc.PointerEvent(ButtonNone, x, y)
+
+	// Give the mouse some time to "settle" after moving.
+	time.Sleep(10 * time.Millisecond)
+
+	// Click and release the left mouse button.
+	vc.PointerEvent(ButtonLeft, x, y)
+	vc.PointerEvent(ButtonNone, x, y)
+
+	// CLose connection.
+	vc.Close()
 }
 
-func TestClientCutText(t *testing.T) {
-	t = nil
-}
+func TestPointerEvent(t *testing.T) {}
+
+func TestClientCutText(t *testing.T) {}

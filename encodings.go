@@ -1,6 +1,5 @@
 /*
-Encodings implements RFC 6143 §7.7 Encodings.
-
+encodings.go implements RFC 6143 §7.7 Encodings.
 See http://tools.ietf.org/html/rfc6143#section-7.7 for more info.
 */
 package vnc
@@ -11,14 +10,14 @@ import (
 )
 
 const (
-	RawEnc = int32(iota)
-	copyRectEnc
-	rreEnc
-	hextileEnc           = int32(5)
-	trleEnc              = int32(15)
-	zrleEnc              = int32(16)
-	colorPseudoEnc       = int32(-239)
-	desktopSizePseudoEnc = int32(-223)
+	Raw               = int32(0)
+	CopyRect          = int32(1)
+	RRE               = int32(2)
+	Hextile           = int32(5)
+	TRLE              = int32(15)
+	ZRLE              = int32(16)
+	ColorPseudo       = int32(-239)
+	DesktopSizePseudo = int32(-223)
 )
 
 // An Encoding implements a method for encoding pixel data that is
@@ -27,26 +26,25 @@ type Encoding interface {
 	// The number that uniquely identifies this encoding type.
 	Type() int32
 
-	// Read reads the contents of the encoded pixel data from the reader.
+	// Read the contents of the encoded pixel data from the reader.
 	// This should return a new Encoding implementation that contains
 	// the proper data.
 	Read(*ClientConn, *Rectangle, io.Reader) (Encoding, error)
 }
 
 // RawEncoding is raw pixel data sent by the server.
-//
 // See RFC 6143 Section 7.7.1
 type RawEncoding struct {
-	enc    int32
 	Colors []Color
 }
 
+// NewRawEncoding returns a new RawEncoding.
 func NewRawEncoding(c []Color) *RawEncoding {
-	return &RawEncoding{RawEnc, c}
+	return &RawEncoding{c}
 }
 
 func (e *RawEncoding) Type() int32 {
-	return e.enc
+	return Raw
 }
 
 func (*RawEncoding) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {

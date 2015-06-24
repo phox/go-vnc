@@ -1,6 +1,5 @@
 /*
-Server implements RFC 6143 §7.6 Server-to-Client Messages.
-
+server.go implements RFC 6143 §7.6 Server-to-Client Messages.
 See http://tools.ietf.org/html/rfc6143#section-7.6 for more info.
 */
 package vnc
@@ -13,9 +12,9 @@ import (
 
 const (
 	FramebufferUpdate = uint8(iota)
-	setColorMapEntries
-	bell
-	serverCutText
+	SetColorMapEntries
+	Bell
+	ServerCutText
 )
 
 // A ServerMessage implements a message sent from the server to the client.
@@ -35,26 +34,26 @@ type Rectangle struct {
 	Enc                 Encoding
 }
 
-type FramebufferUpdateMsg struct {
+type FramebufferUpdateMessage struct {
 	Msg     uint8
 	Pad     [1]byte
 	NumRect uint16
 	Rects   []Rectangle
 }
 
-func NewFramebufferUpdateMsg(rects []Rectangle) *FramebufferUpdateMsg {
-	return &FramebufferUpdateMsg{
+func NewFramebufferUpdateMessage(rects []Rectangle) *FramebufferUpdateMessage {
+	return &FramebufferUpdateMessage{
 		Msg:     FramebufferUpdate,
 		NumRect: uint16(len(rects)),
 		Rects:   rects,
 	}
 }
 
-func (m *FramebufferUpdateMsg) Type() uint8 {
+func (m *FramebufferUpdateMessage) Type() uint8 {
 	return m.Msg
 }
 
-func (m *FramebufferUpdateMsg) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
+func (m *FramebufferUpdateMessage) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
 	// Read off the padding
 	if _, err := io.ReadFull(r, m.Pad[:]); err != nil {
 		return nil, err
@@ -72,7 +71,7 @@ func (m *FramebufferUpdateMsg) Read(c *ClientConn, r io.Reader) (ServerMessage, 
 	}
 
 	// We must always support the raw encoding
-	encMap[RawEnc] = NewRawEncoding([]Color{})
+	encMap[Raw] = NewRawEncoding([]Color{})
 
 	rects := make([]Rectangle, numRects)
 	for i := uint16(0); i < numRects; i++ {
@@ -103,7 +102,7 @@ func (m *FramebufferUpdateMsg) Read(c *ClientConn, r io.Reader) (ServerMessage, 
 		}
 	}
 
-	return NewFramebufferUpdateMsg(rects), nil
+	return NewFramebufferUpdateMessage(rects), nil
 }
 
 // SetColorMapEntries is sent by the server to set values into
@@ -118,23 +117,23 @@ type Color struct {
 	R, G, B uint16
 }
 
-type SetColorMapEntries struct {
+type SetColorMapEntriesMessage struct {
 	FirstColor uint16
 	Colors     []Color
 }
 
-func (*SetColorMapEntries) Type() uint8 {
-	return setColorMapEntries
+func (*SetColorMapEntriesMessage) Type() uint8 {
+	return SetColorMapEntries
 }
 
-func (*SetColorMapEntries) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
+func (*SetColorMapEntriesMessage) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
 	// Read off the padding
 	var padding [1]byte
 	if _, err := io.ReadFull(r, padding[:]); err != nil {
 		return nil, err
 	}
 
-	var result SetColorMapEntries
+	var result SetColorMapEntriesMessage
 	if err := binary.Read(r, binary.BigEndian, &result.FirstColor); err != nil {
 		return nil, err
 	}
@@ -170,28 +169,28 @@ func (*SetColorMapEntries) Read(c *ClientConn, r io.Reader) (ServerMessage, erro
 // Bell signals that an audible bell should be made on the client.
 //
 // See RFC 6143 Section 7.6.3
-type Bell struct{}
+type BellMessage struct{}
 
-func (*Bell) Type() uint8 {
-	return bell
+func (*BellMessage) Type() uint8 {
+	return Bell
 }
 
-func (*Bell) Read(*ClientConn, io.Reader) (ServerMessage, error) {
-	return new(Bell), nil
+func (*BellMessage) Read(*ClientConn, io.Reader) (ServerMessage, error) {
+	return new(BellMessage), nil
 }
 
 // ServerCutText indicates the server has new text in the cut buffer.
 //
 // See RFC 6143 Section 7.6.4
-type ServerCutText struct {
+type ServerCutTextMessage struct {
 	Text string
 }
 
-func (*ServerCutText) Type() uint8 {
-	return serverCutText
+func (*ServerCutTextMessage) Type() uint8 {
+	return ServerCutText
 }
 
-func (*ServerCutText) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
+func (*ServerCutTextMessage) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
 	// Read off the padding
 	var padding [1]byte
 	if _, err := io.ReadFull(r, padding[:]); err != nil {
@@ -208,5 +207,5 @@ func (*ServerCutText) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
 		return nil, err
 	}
 
-	return &ServerCutText{string(textBytes)}, nil
+	return &ServerCutTextMessage{string(textBytes)}, nil
 }

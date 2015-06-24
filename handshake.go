@@ -1,6 +1,5 @@
 /*
-Handshake implements RFC 6143 §7.1 Handshake Messages.
-
+handshake.go implements RFC 6143 §7.1 Handshake Messages.
 See http://tools.ietf.org/html/rfc6143#section-7.1 for more info.
 */
 package vnc

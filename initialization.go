@@ -1,6 +1,5 @@
 /*
-Initialization implements RFC 6143 §7.3 Initialization Messages.
-
+initialization.go implements RFC 6143 §7.3 Initialization Messages.
 See http://tools.ietf.org/html/rfc6143#section-7.3 for more info.
 */
 package vnc
