@@ -169,7 +169,7 @@ func ExampleClientConn_PointerEvent() {
 	vc.PointerEvent(ButtonLeft, x, y)
 	vc.PointerEvent(ButtonNone, x, y)
 
-	// CLose connection.
+	// Close connection.
 	vc.Close()
 }
 
