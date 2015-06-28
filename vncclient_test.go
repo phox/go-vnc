@@ -2,11 +2,11 @@ package vnc
 
 import (
 	"fmt"
+	"log"
 	"net"
 	"reflect"
 	"testing"
 
-	vnc "github.com/kward/go-vnc"
 	"golang.org/x/net/context"
 )
 
@@ -75,7 +75,8 @@ func ExampleConnect() {
 	}
 
 	// Negotiate connection with the server.
-	vc, err := vnc.Connect(context.Background(), nc, vnc.NewClientConfig("password"))
+	vcc := NewClientConfig("password")
+	vc, err := Connect(context.Background(), nc, vcc)
 	if err != nil {
 		log.Fatalf("Error negotiating connection to VNC host. %v", err)
 	}
@@ -83,9 +84,9 @@ func ExampleConnect() {
 	// Listen and handle server messages.
 	go vc.ListenAndHandle()
 	for {
-		msg := <-cfg.ServerMessageCh
+		msg := <-vcc.ServerMessageCh
 		switch msg.Type() {
-		case vnc.FramebufferUpdate:
+		case FramebufferUpdate:
 			log.Println("Received FramebufferUpdate message.")
 		default:
 			log.Printf("Received message type:%v msg:%v\n", msg.Type(), msg)
