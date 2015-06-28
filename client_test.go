@@ -6,6 +6,8 @@ import (
 	"net"
 	"testing"
 	"time"
+
+	"golang.org/x/net/context"
 )
 
 func TestSetPixelFormat(t *testing.T) {
@@ -130,7 +132,7 @@ func ExampleClientConn_KeyEvent() {
 	}
 
 	// Negotiate VNC connection.
-	vc, err := Client(nc, NewClientConfig("somepass"))
+	vc, err := Connect(context.Background(), nc, NewClientConfig("somepass"))
 	if err != nil {
 		panic(fmt.Sprintf("Could not negotiate a VNC connection: %v\n", err))
 	}
@@ -153,7 +155,7 @@ func ExampleClientConn_PointerEvent() {
 	}
 
 	// Negotiate VNC connection.
-	vc, err := Client(nc, NewClientConfig("somepass"))
+	vc, err := Connect(context.Background(), nc, NewClientConfig("somepass"))
 	if err != nil {
 		panic(fmt.Sprintf("Could not negotiate a VNC connection: %v\n", err))
 	}

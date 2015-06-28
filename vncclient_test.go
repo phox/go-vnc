@@ -5,6 +5,9 @@ import (
 	"net"
 	"reflect"
 	"testing"
+
+	vnc "github.com/kward/go-vnc"
+	"golang.org/x/net/context"
 )
 
 func newMockServer(t *testing.T, version string) string {
@@ -30,13 +33,13 @@ func newMockServer(t *testing.T, version string) string {
 	return ln.Addr().String()
 }
 
-func TestClient_LowMajorVersion(t *testing.T) {
+func TestLowMajorVersion(t *testing.T) {
 	nc, err := net.Dial("tcp", newMockServer(t, "002.009"))
 	if err != nil {
 		t.Fatalf("error connecting to mock server: %s", err)
 	}
 
-	_, err = Client(nc, &ClientConfig{})
+	_, err = Connect(context.Background(), nc, &ClientConfig{})
 	if err == nil {
 		t.Fatal("error expected")
 	}
@@ -47,19 +50,45 @@ func TestClient_LowMajorVersion(t *testing.T) {
 	}
 }
 
-func TestClient_LowMinorVersion(t *testing.T) {
+func TestLowMinorVersion(t *testing.T) {
 	nc, err := net.Dial("tcp", newMockServer(t, "003.002"))
 	if err != nil {
 		t.Fatalf("error connecting to mock server: %s", err)
 	}
 
-	_, err = Client(nc, &ClientConfig{})
+	_, err = Connect(context.Background(), nc, &ClientConfig{})
 	if err == nil {
 		t.Fatal("error expected")
 	}
 	if err != nil {
 		if verr, ok := err.(*VNCError); !ok {
 			t.Errorf("Client() unexpected %v error: %v", reflect.TypeOf(err), verr)
+		}
+	}
+}
+
+func ExampleConnect() {
+	// Establish TCP connection to VNC server.
+	nc, err := net.Dial("tcp", "127.0.0.1:5900")
+	if err != nil {
+		log.Fatalf("Error connecting to VNC host. %v", err)
+	}
+
+	// Negotiate connection with the server.
+	vc, err := vnc.Connect(context.Background(), nc, vnc.NewClientConfig("password"))
+	if err != nil {
+		log.Fatalf("Error negotiating connection to VNC host. %v", err)
+	}
+
+	// Listen and handle server messages.
+	go vc.ListenAndHandle()
+	for {
+		msg := <-cfg.ServerMessageCh
+		switch msg.Type() {
+		case vnc.FramebufferUpdate:
+			log.Println("Received FramebufferUpdate message.")
+		default:
+			log.Printf("Received message type:%v msg:%v\n", msg.Type(), msg)
 		}
 	}
 }
