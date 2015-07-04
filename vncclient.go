@@ -99,25 +99,25 @@ type ClientConn struct {
 	// If the pixel format uses a color map, then this is the color
 	// map that is used. This should not be modified directly, since
 	// the data comes from the server.
-	ColorMap [256]Color
-
-	// Encodings supported by the client. This should not be modified
-	// directly. Instead, SetEncodings should be used.
-	Encodings []Encoding
-
-	// Width of the frame buffer in pixels, sent from the server.
-	FramebufferWidth uint16
-
-	// Height of the frame buffer in pixels, sent from the server.
-	FramebufferHeight uint16
+	colorMap [256]Color
 
 	// Name associated with the desktop, sent from the server.
 	desktopName string
 
+	// Encodings supported by the client. This should not be modified
+	// directly. Instead, SetEncodings should be used.
+	encodings []Encoding
+
+	// Height of the frame buffer in pixels, sent from the server.
+	fbHeight uint16
+
+	// Width of the frame buffer in pixels, sent from the server.
+	fbWidth uint16
+
 	// The pixel format associated with the connection. This shouldn't
 	// be modified. If you wish to set a new pixel format, use the
 	// SetPixelFormat method.
-	PixelFormat PixelFormat
+	pixelFormat PixelFormat
 }
 
 // Close a connection to a VNC server.
@@ -126,9 +126,24 @@ func (c *ClientConn) Close() error {
 	return c.c.Close()
 }
 
-// DesktopName returns the desktop name provided by the server.
+// DesktopName returns the server provided desktop name.
 func (c *ClientConn) DesktopName() string {
 	return c.desktopName
+}
+
+// Encodings returns the server provided encodings.
+func (c *ClientConn) Encodings() []Encoding {
+	return c.encodings
+}
+
+// FramebufferHeight returns the server provided framebuffer height.
+func (c *ClientConn) FramebufferHeight() uint16 {
+	return c.fbHeight
+}
+
+// FramebufferWidth returns the server provided framebuffer width.
+func (c *ClientConn) FramebufferWidth() uint16 {
+	return c.fbWidth
 }
 
 // ListenAndHandle listens to a VNC server and handles server messages.

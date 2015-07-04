@@ -66,7 +66,7 @@ func (m *FramebufferUpdateMessage) Read(c *ClientConn, r io.Reader) (ServerMessa
 
 	// Build the map of encodings supported
 	encMap := make(map[int32]Encoding)
-	for _, e := range c.Encodings {
+	for _, e := range c.Encodings() {
 		encMap[e.Type()] = e
 	}
 
@@ -160,7 +160,7 @@ func (*SetColorMapEntriesMessage) Read(c *ClientConn, r io.Reader) (ServerMessag
 		}
 
 		// Update the connection's color map
-		c.ColorMap[result.FirstColor+i] = *color
+		c.colorMap[result.FirstColor+i] = *color
 	}
 
 	return &result, nil

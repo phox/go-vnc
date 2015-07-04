@@ -49,10 +49,10 @@ func (c *ClientConn) SetPixelFormat(pf PixelFormat) error {
 
 	// Invalidate the color map.
 	if pf.TrueColor == RFBFalse {
-		c.ColorMap = [256]Color{}
+		c.colorMap = [256]Color{}
 	}
 
-	c.PixelFormat = pf
+	c.pixelFormat = pf
 	return nil
 }
 
@@ -95,7 +95,7 @@ func (c *ClientConn) SetEncodings(e []Encoding) error {
 			return err
 		}
 	}
-	c.Encodings = e
+	c.encodings = e
 
 	return nil
 }

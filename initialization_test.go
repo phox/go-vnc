@@ -105,14 +105,14 @@ func TestServerInit(t *testing.T) {
 		if err != nil {
 			t.Fatalf("serverInit() error %v", err)
 		}
-		if conn.FramebufferWidth != tt.fbWidth {
-			t.Errorf("serverInit() FramebufferWidth: got = %v, want = %v", conn.FramebufferWidth, tt.fbWidth)
+		if conn.fbWidth != tt.fbWidth {
+			t.Errorf("serverInit() FramebufferWidth: got = %v, want = %v", conn.fbWidth, tt.fbWidth)
 		}
-		if conn.FramebufferHeight != tt.fbHeight {
-			t.Errorf("serverInit() FramebufferHeight: got = %v, want = %v", conn.FramebufferHeight, tt.fbHeight)
+		if conn.fbHeight != tt.fbHeight {
+			t.Errorf("serverInit() FramebufferHeight: got = %v, want = %v", conn.fbHeight, tt.fbHeight)
 		}
-		if !equalPixelFormat(conn.PixelFormat, tt.pixelFormat) {
-			t.Errorf("serverInit() PixelFormat: got = %v, want = %v", conn.PixelFormat, tt.pixelFormat)
+		if !equalPixelFormat(conn.pixelFormat, tt.pixelFormat) {
+			t.Errorf("serverInit() PixelFormat: got = %v, want = %v", conn.pixelFormat, tt.pixelFormat)
 		}
 		if conn.DesktopName() != tt.desktopName {
 			t.Errorf("serverInit() DesktopName: got = %v, want = %v", conn.DesktopName(), tt.desktopName)
