@@ -1,16 +1,40 @@
 # VNC Library for Go
-
 go-vnc is a VNC library for Go, initially supporting VNC clients but
 with the goal of eventually implementing a VNC server.
 
-This library implements [RFC 6143](http://tools.ietf.org/html/rfc6143).
+This library implements [RFC 6143][RFC6143].
 
-## Usage & Installation
+## Project links
+* Build Status:  [![Build Status][CIStatus]][CIProject]
+* Documentation: [![GoDoc][GoDocStatus]][GoDoc]
+* Views:         [![views][SGViews]][SGProject] [![views_24h][SGViews24h]][SGProject]
+* Users:         [![library users][SGUsers]][SGProject] [![dependents][SGDependents]][SGProject]
 
-The library is installable via standard `go get`. The package name is `vnc`.
+## Setup
+1. Download software and supporting packages.
 
-```
-$ go get github.com/kward/go-vnc
-```
+    ```
+    $ go get github.com/kward/go-vnc
+    $ go get golang.org/x/net
+    ```
 
-Documentation is available on [GoDoc](http://godoc.org/github.com/kward/go-vnc).
+## Usage
+Sample code usage is available in the GoDoc.
+
+- Connect and listen to server messages: <https://godoc.org/github.com/kward/go-vnc#example-Connect>
+
+
+<!--- Links -->
+[RFC6143]: http://tools.ietf.org/html/rfc6143
+
+[CIProject]: https://travis-ci.org/kward/go-vnc
+[CIStatus]: https://travis-ci.org/kward/go-vnc.png?branch=master
+
+[GoDoc]: https://godoc.org/github.com/kward/go-vnc
+[GoDocStatus]: https://godoc.org/github.com/kward/go-vnc?status.svg
+
+[SGProject]: https://sourcegraph.com/github.com/kward/go-vnc
+[SGDependents]: https://sourcegraph.com/api/repos/github.com/kward/go-vnc/.badges/dependents.svg
+[SGUsers]: https://sourcegraph.com/api/repos/github.com/kward/go-vnc/.badges/library-users.svg
+[SGViews]: https://sourcegraph.com/api/repos/github.com/kward/go-vnc/.counters/views.svg
+[SGViews24h]: https://sourcegraph.com/api/repos/github.com/kward/go-vnc/.counters/views-24h.svg?no-count=1
