@@ -42,7 +42,7 @@ func (c *ClientConn) serverInit() error {
 	if err := binary.Read(c.c, binary.BigEndian, &nameBytes); err != nil {
 		return err
 	}
-	c.DesktopName = string(nameBytes)
+	c.desktopName = string(nameBytes)
 
 	return nil
 }

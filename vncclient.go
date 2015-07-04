@@ -14,34 +14,35 @@ import (
 	"golang.org/x/net/context"
 )
 
-// The ClientConn type holds client connection information.
-type ClientConn struct {
-	c               net.Conn
-	config          *ClientConfig
-	protocolVersion string
+// Connect negotiates a connection to a VNC server.
+func Connect(ctx context.Context, c net.Conn, cfg *ClientConfig) (*ClientConn, error) {
+	conn := &ClientConn{
+		c:      c,
+		config: cfg,
+	}
 
-	// If the pixel format uses a color map, then this is the color
-	// map that is used. This should not be modified directly, since
-	// the data comes from the server.
-	ColorMap [256]Color
+	if err := conn.protocolVersionHandshake(); err != nil {
+		conn.Close()
+		return nil, err
+	}
+	if err := conn.securityHandshake(); err != nil {
+		conn.Close()
+		return nil, err
+	}
+	if err := conn.securityResultHandshake(); err != nil {
+		conn.Close()
+		return nil, err
+	}
+	if err := conn.clientInit(); err != nil {
+		conn.Close()
+		return nil, err
+	}
+	if err := conn.serverInit(); err != nil {
+		conn.Close()
+		return nil, err
+	}
 
-	// Encodings supported by the client. This should not be modified
-	// directly. Instead, SetEncodings should be used.
-	Encodings []Encoding
-
-	// Width of the frame buffer in pixels, sent from the server.
-	FramebufferWidth uint16
-
-	// Height of the frame buffer in pixels, sent from the server.
-	FramebufferHeight uint16
-
-	// Name associated with the desktop, sent from the server.
-	DesktopName string
-
-	// The pixel format associated with the connection. This shouldn't
-	// be modified. If you wish to set a new pixel format, use the
-	// SetPixelFormat method.
-	PixelFormat PixelFormat
+	return conn, nil
 }
 
 // A ClientConfig structure is used to configure a ClientConn. After
@@ -89,41 +90,45 @@ func NewClientConfig(p string) *ClientConfig {
 	}
 }
 
-// Connect negotiates a connection to a VNC server.
-func Connect(ctx context.Context, c net.Conn, cfg *ClientConfig) (*ClientConn, error) {
-	conn := &ClientConn{
-		c:      c,
-		config: cfg,
-	}
+// The ClientConn type holds client connection information.
+type ClientConn struct {
+	c               net.Conn
+	config          *ClientConfig
+	protocolVersion string
 
-	if err := conn.protocolVersionHandshake(); err != nil {
-		conn.Close()
-		return nil, err
-	}
-	if err := conn.securityHandshake(); err != nil {
-		conn.Close()
-		return nil, err
-	}
-	if err := conn.securityResultHandshake(); err != nil {
-		conn.Close()
-		return nil, err
-	}
-	if err := conn.clientInit(); err != nil {
-		conn.Close()
-		return nil, err
-	}
-	if err := conn.serverInit(); err != nil {
-		conn.Close()
-		return nil, err
-	}
+	// If the pixel format uses a color map, then this is the color
+	// map that is used. This should not be modified directly, since
+	// the data comes from the server.
+	ColorMap [256]Color
 
-	return conn, nil
+	// Encodings supported by the client. This should not be modified
+	// directly. Instead, SetEncodings should be used.
+	Encodings []Encoding
+
+	// Width of the frame buffer in pixels, sent from the server.
+	FramebufferWidth uint16
+
+	// Height of the frame buffer in pixels, sent from the server.
+	FramebufferHeight uint16
+
+	// Name associated with the desktop, sent from the server.
+	desktopName string
+
+	// The pixel format associated with the connection. This shouldn't
+	// be modified. If you wish to set a new pixel format, use the
+	// SetPixelFormat method.
+	PixelFormat PixelFormat
 }
 
 // Close a connection to a VNC server.
 func (c *ClientConn) Close() error {
 	fmt.Println("VNC Client connection closed.")
 	return c.c.Close()
+}
+
+// DesktopName returns the desktop name provided by the server.
+func (c *ClientConn) DesktopName() string {
+	return c.desktopName
 }
 
 // ListenAndHandle listens to a VNC server and handles server messages.
