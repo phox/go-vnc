@@ -10,6 +10,8 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+
+	"golang.org/x/net/context"
 )
 
 // The ClientConn type holds client connection information.
@@ -87,8 +89,8 @@ func NewClientConfig(p string) *ClientConfig {
 	}
 }
 
-// Client negotiates a connection to a VNC server.
-func Client(c net.Conn, cfg *ClientConfig) (*ClientConn, error) {
+// Connect negotiates a connection to a VNC server.
+func Connect(ctx context.Context, c net.Conn, cfg *ClientConfig) (*ClientConn, error) {
 	conn := &ClientConn{
 		c:      c,
 		config: cfg,
@@ -115,8 +117,6 @@ func Client(c net.Conn, cfg *ClientConfig) (*ClientConn, error) {
 		return nil, err
 	}
 
-	go conn.mainLoop()
-
 	return conn, nil
 }
 
@@ -126,9 +126,8 @@ func (c *ClientConn) Close() error {
 	return c.c.Close()
 }
 
-// mainLoop reads messages sent from the server and routes them to the
-// proper channels for users of the client to read.
-func (c *ClientConn) mainLoop() error {
+// ListenAndHandle listens to a VNC server and handles server messages.
+func (c *ClientConn) ListenAndHandle() error {
 	defer c.Close()
 
 	if c.config.ServerMessages == nil {
