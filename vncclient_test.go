@@ -67,6 +67,20 @@ func TestLowMinorVersion(t *testing.T) {
 	}
 }
 
+func TestClientConn(t *testing.T) {
+	conn := &ClientConn{}
+
+	if got, want := conn.DesktopName(), ""; got != want {
+		t.Errorf("DesktopName() failed; got = %v, want = %v", got, want)
+	}
+	if got, want := conn.FramebufferHeight(), uint16(0); got != want {
+		t.Errorf("FramebufferHeight() failed; got = %v, want = %v", got, want)
+	}
+	if got, want := conn.FramebufferWidth(), uint16(0); got != want {
+		t.Errorf("FramebufferWidth() failed; got = %v, want = %v", got, want)
+	}
+}
+
 func ExampleConnect() {
 	// Establish TCP connection to VNC server.
 	nc, err := net.Dial("tcp", "127.0.0.1:5900")
