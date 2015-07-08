@@ -100,7 +100,7 @@ func (c *ClientConn) SetEncodings(e []Encoding) error {
 	return nil
 }
 
-// FramebufferUpdateRequestMessage defines a FramebufferUpdateRequest message.
+// FramebufferUpdateRequestMessage holds the wire format message.
 type FramebufferUpdateRequestMessage struct {
 	Msg                 uint8
 	Inc                 uint8
