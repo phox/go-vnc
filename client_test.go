@@ -116,10 +116,10 @@ func TestFramebufferUpdateRequest(t *testing.T) {
 			t.Errorf("FramebufferUpdateRequest() Y incorrect; got = %v, want = %v", req.Y, tt.y)
 		}
 		if req.Width != tt.w {
-			t.Errorf("FramebufferUpdateRequest() X incorrect; got = %v, want = %v", req.Width, tt.w)
+			t.Errorf("FramebufferUpdateRequest() Width incorrect; got = %v, want = %v", req.Width, tt.w)
 		}
 		if req.Height != tt.h {
-			t.Errorf("FramebufferUpdateRequest() X incorrect; got = %v, want = %v", req.Height, tt.h)
+			t.Errorf("FramebufferUpdateRequest() Height incorrect; got = %v, want = %v", req.Height, tt.h)
 		}
 	}
 }
