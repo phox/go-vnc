@@ -388,6 +388,5 @@ const (
 	_
 	KeyAltLeft
 	KeyAltRight
-
 	KeyDelete = 0xffff
 )
