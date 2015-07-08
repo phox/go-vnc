@@ -12,8 +12,6 @@ import (
 	"math"
 )
 
-const pfSize = 16 // PixelFormat structure size.
-
 // PixelFormat describes the way a pixel is formatted for a VNC connection.
 type PixelFormat struct {
 	BPP, Depth, BigEndian, TrueColor uint8
@@ -58,7 +56,7 @@ func (pf PixelFormat) Bytes() ([]byte, error) {
 	}
 
 	// Padding values automatically set to 0 during slice conversion.
-	return buf.Bytes()[:pfSize], nil
+	return buf.Bytes(), nil
 }
 
 // Write populates the PixelFormat structure with data from the io.Reader. Any
