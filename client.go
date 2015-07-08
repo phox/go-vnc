@@ -144,6 +144,7 @@ func (c *ClientConn) KeyEvent(keysym uint32, down bool) error {
 		}
 	}
 
+	settleUI()
 	return nil
 }
 
@@ -187,6 +188,7 @@ func (c *ClientConn) PointerEvent(mask ButtonMask, x, y uint16) error {
 		return err
 	}
 
+	settleUI()
 	return nil
 }
 

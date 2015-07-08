@@ -145,7 +145,9 @@ func ExampleClientConn_KeyEvent() {
 	vc.Close()
 }
 
-func TestKeyEvent(t *testing.T) {}
+func TestKeyEvent(t *testing.T) {
+	SetSettle(0) // Disable UI settling for tests.
+}
 
 func ExampleClientConn_PointerEvent() {
 	// Establish TCP connection.
@@ -163,9 +165,6 @@ func ExampleClientConn_PointerEvent() {
 	// Move mouse to x=100, y=200.
 	x, y := uint16(100), uint16(200)
 	vc.PointerEvent(ButtonNone, x, y)
-
-	// Give the mouse some time to "settle" after moving.
-	time.Sleep(10 * time.Millisecond)
 
 	// Click and release the left mouse button.
 	vc.PointerEvent(ButtonLeft, x, y)
@@ -190,6 +189,7 @@ func TestPointerEvent(t *testing.T) {
 		config: &ClientConfig{},
 	}
 
+	SetSettle(0) // Disable UI settling for tests.
 	for _, tt := range tests {
 		mockConn.Reset()
 
