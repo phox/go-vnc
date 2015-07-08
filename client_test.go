@@ -146,7 +146,53 @@ func ExampleClientConn_KeyEvent() {
 }
 
 func TestKeyEvent(t *testing.T) {
+	tests := []struct {
+		key  uint32
+		down bool
+	}{
+		{Key0, PressKey},
+		{Key1, ReleaseKey},
+	}
+
+	mockConn := &MockConn{}
+	conn := &ClientConn{
+		c:      mockConn,
+		config: &ClientConfig{},
+	}
+
 	SetSettle(0) // Disable UI settling for tests.
+	for _, tt := range tests {
+		mockConn.Reset()
+
+		// Send request.
+		err := conn.KeyEvent(tt.key, tt.down)
+		if err != nil {
+			t.Fatalf("unexpected error %v", err)
+		}
+
+		// Validate the request.
+		req := KeyEventMessage{}
+		if err := binary.Read(conn.c, binary.BigEndian, &req); err != nil {
+			t.Fatal(err)
+		}
+		var down bool
+		switch req.DownFlag {
+		case RFBTrue:
+			down = PressKey
+		case RFBFalse:
+			down = ReleaseKey
+		}
+
+		if got, want := req.Msg, keyEventMsg; got != want {
+			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
+		}
+		if got, want := down, tt.down; got != want {
+			t.Errorf("incorrect down-flag; got = %v, want = %v", got, want)
+		}
+		if got, want := req.Key, tt.key; got != want {
+			t.Errorf("incorrect key; got = %v, want = %v", got, want)
+		}
+	}
 }
 
 func ExampleClientConn_PointerEvent() {
@@ -196,7 +242,7 @@ func TestPointerEvent(t *testing.T) {
 		// Send request.
 		err := conn.PointerEvent(tt.mask, tt.x, tt.y)
 		if err != nil {
-			t.Fatalf("PointerEvent() unexpected error %v", err)
+			t.Fatalf("unexpected error %v", err)
 		}
 
 		// Validate the request.

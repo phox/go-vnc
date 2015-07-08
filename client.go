@@ -102,7 +102,8 @@ func (c *ClientConn) SetEncodings(e []Encoding) error {
 
 // FramebufferUpdateRequestMessage defines a FramebufferUpdateRequest message.
 type FramebufferUpdateRequestMessage struct {
-	Msg, Inc            uint8
+	Msg                 uint8
+	Inc                 uint8
 	X, Y, Width, Height uint16
 }
 
@@ -118,6 +119,19 @@ func (c *ClientConn) FramebufferUpdateRequest(inc uint8, x, y, w, h uint16) erro
 	return nil
 }
 
+// KeyEventMessage holds the wire format message.
+type KeyEventMessage struct {
+	Msg      uint8
+	DownFlag uint8
+	_        [2]byte
+	Key      uint32
+}
+
+const (
+	PressKey   = true
+	ReleaseKey = false
+)
+
 // KeyEvent indicates a key press or release and sends it to the server.
 // The key is indicated using the X Window System "keysym" value. Use
 // Google to find a reference of these values. To simulate a key press,
@@ -125,23 +139,14 @@ func (c *ClientConn) FramebufferUpdateRequest(inc uint8, x, y, w, h uint16) erro
 //
 // See RFC 6143 Section 7.5.4.
 func (c *ClientConn) KeyEvent(keysym uint32, down bool) error {
-	var downFlag uint8 = 0
+	var downFlag uint8 = RFBFalse
 	if down {
-		downFlag = 1
+		downFlag = RFBTrue
 	}
 
-	data := []interface{}{
-		keyEventMsg,
-		downFlag,
-		uint8(0),
-		uint8(0),
-		keysym,
-	}
-
-	for _, val := range data {
-		if err := binary.Write(c.c, binary.BigEndian, val); err != nil {
-			return err
-		}
+	msg := KeyEventMessage{keyEventMsg, downFlag, [2]byte{}, keysym}
+	if err := binary.Write(c.c, binary.BigEndian, msg); err != nil {
+		return err
 	}
 
 	settleUI()
@@ -164,6 +169,7 @@ const (
 	ButtonNone = ButtonMask(0)
 )
 
+// PointerEventMessage holds the wire format message.
 type PointerEventMessage struct {
 	Msg  uint8
 	Mask uint8
@@ -178,13 +184,8 @@ type PointerEventMessage struct {
 //
 // See RFC 6143 Section 7.5.5
 func (c *ClientConn) PointerEvent(mask ButtonMask, x, y uint16) error {
-	var buf bytes.Buffer
-
 	msg := PointerEventMessage{pointerEventMsg, uint8(mask), x, y}
-	if err := binary.Write(&buf, binary.BigEndian, msg); err != nil {
-		return err
-	}
-	if _, err := c.c.Write(buf.Bytes()); err != nil {
+	if err := binary.Write(c.c, binary.BigEndian, msg); err != nil {
 		return err
 	}
 
