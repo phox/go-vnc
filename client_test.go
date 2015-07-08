@@ -175,6 +175,48 @@ func ExampleClientConn_PointerEvent() {
 	vc.Close()
 }
 
-func TestPointerEvent(t *testing.T) {}
+func TestPointerEvent(t *testing.T) {
+	tests := []struct {
+		mask ButtonMask
+		x, y uint16
+	}{
+		{ButtonNone, 0, 0},
+		{ButtonLeft | ButtonRight, 123, 456},
+	}
+
+	mockConn := &MockConn{}
+	conn := &ClientConn{
+		c:      mockConn,
+		config: &ClientConfig{},
+	}
+
+	for _, tt := range tests {
+		mockConn.Reset()
+
+		// Send request.
+		err := conn.PointerEvent(tt.mask, tt.x, tt.y)
+		if err != nil {
+			t.Fatalf("PointerEvent() unexpected error %v", err)
+		}
+
+		// Validate the request.
+		req := PointerEventMessage{}
+		if err := binary.Read(conn.c, binary.BigEndian, &req); err != nil {
+			t.Fatal(err)
+		}
+		if got, want := req.Msg, pointerEventMsg; got != want {
+			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
+		}
+		if got, want := req.Mask, uint8(tt.mask); got != want {
+			t.Errorf("incorrect button-mask; got = %v, want = %v", got, want)
+		}
+		if got, want := req.X, tt.x; got != want {
+			t.Errorf("incorrect x-position; got = %v, want = %v", got, want)
+		}
+		if got, want := req.Y, tt.y; got != want {
+			t.Errorf("incorrect y-position; got = %v, want = %v", got, want)
+		}
+	}
+}
 
 func TestClientCutText(t *testing.T) {}

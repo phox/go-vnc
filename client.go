@@ -147,6 +147,28 @@ func (c *ClientConn) KeyEvent(keysym uint32, down bool) error {
 	return nil
 }
 
+// ButtonMask represents a mask of pointer presses/releases.
+type ButtonMask uint8
+
+// All available button mask components.
+const (
+	ButtonLeft ButtonMask = 1 << iota
+	ButtonMiddle
+	ButtonRight
+	Button4
+	Button5
+	Button6
+	Button7
+	Button8
+	ButtonNone = ButtonMask(0)
+)
+
+type PointerEventMessage struct {
+	Msg  uint8
+	Mask uint8
+	X, Y uint16
+}
+
 // PointerEvent indicates that pointer movement or a pointer button
 // press or release.
 //
@@ -157,20 +179,11 @@ func (c *ClientConn) KeyEvent(keysym uint32, down bool) error {
 func (c *ClientConn) PointerEvent(mask ButtonMask, x, y uint16) error {
 	var buf bytes.Buffer
 
-	data := []interface{}{
-		pointerEventMsg,
-		uint8(mask),
-		x,
-		y,
+	msg := PointerEventMessage{pointerEventMsg, uint8(mask), x, y}
+	if err := binary.Write(&buf, binary.BigEndian, msg); err != nil {
+		return err
 	}
-
-	for _, val := range data {
-		if err := binary.Write(&buf, binary.BigEndian, val); err != nil {
-			return err
-		}
-	}
-
-	if _, err := c.c.Write(buf.Bytes()[0:6]); err != nil {
+	if _, err := c.c.Write(buf.Bytes()); err != nil {
 		return err
 	}
 
@@ -222,22 +235,6 @@ func (c *ClientConn) ClientCutText(text string) error {
 //
 // Constants to use for KeyEvents PointerEvents.
 //
-
-// ButtonMask represents a mask of pointer presses/releases.
-type ButtonMask uint8
-
-// All available button mask components.
-const (
-	ButtonLeft ButtonMask = 1 << iota
-	ButtonMiddle
-	ButtonRight
-	Button4
-	Button5
-	Button6
-	Button7
-	Button8
-	ButtonNone = ButtonMask(0)
-)
 
 // Latin 1 (byte 3 = 0)
 // ISO/IEC 8859-1 = Unicode U+0020..U+00FF
