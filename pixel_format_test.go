@@ -4,6 +4,8 @@ import (
 	"bytes"
 	"reflect"
 	"testing"
+
+	"github.com/kward/go-vnc/go/operators"
 )
 
 func TestPixelFormatBytes(t *testing.T) {
@@ -49,7 +51,7 @@ func TestPixelFormatBytes(t *testing.T) {
 		if !tt.ok {
 			continue
 		}
-		if got, want := b, tt.b; !EqualSlicesOfByte(got, want) {
+		if got, want := b, tt.b; !operators.EqualSlicesOfByte(got, want) {
 			t.Errorf("PixelFormat.Read() got = %v, want = %v", got, want)
 		}
 	}
@@ -108,5 +110,5 @@ func equalPixelFormat(got, want PixelFormat) bool {
 	if err != nil {
 		return false
 	}
-	return EqualSlicesOfByte(gotBytes, wantBytes)
+	return operators.EqualSlicesOfByte(gotBytes, wantBytes)
 }

@@ -7,6 +7,7 @@ References:
 package vnc
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"net"
@@ -189,12 +190,38 @@ func (c *ClientConn) ListenAndHandle() error {
 	return nil
 }
 
-// receivePacket sends a packet to the network.
+// receive a packet from the network.
 func (c *ClientConn) receive(pkt interface{}) error {
 	return binary.Read(c.c, binary.BigEndian, pkt)
 }
 
-// sendPacket sends a packet to the network.
+// receiveN receives N bytes from the network.
+func (c *ClientConn) receiveN(bytes *[]byte, n int) error {
+	var b byte
+	for i := 0; i < n; i++ {
+		if err := binary.Read(c.c, binary.BigEndian, &b); err != nil {
+			return err
+		}
+		*bytes = append(*bytes, b)
+	}
+	return nil
+}
+
+// send a packet to the network.
 func (c *ClientConn) send(pkt interface{}) error {
 	return binary.Write(c.c, binary.BigEndian, pkt)
+}
+
+// sendN sends N bytes to the network.
+func (c *ClientConn) sendN(bytez []byte) error {
+	var buf bytes.Buffer
+	for _, b := range bytez {
+		if err := binary.Write(&buf, binary.BigEndian, &b); err != nil {
+			return err
+		}
+	}
+	if err := binary.Write(c.c, binary.BigEndian, buf.Bytes()); err != nil {
+		return err
+	}
+	return nil
 }

@@ -8,6 +8,7 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"strings"
 	"unicode"
 )
 
@@ -56,6 +57,7 @@ func (c *ClientConn) SetPixelFormat(pf PixelFormat) error {
 	return nil
 }
 
+// SetEncodingsMessage holds the wire format message.
 type SetEncodingsMessage struct {
 	Msg     uint8   // message-type
 	Pad     [1]byte // padding
@@ -102,9 +104,10 @@ func (c *ClientConn) SetEncodings(e []Encoding) error {
 
 // FramebufferUpdateRequestMessage holds the wire format message.
 type FramebufferUpdateRequestMessage struct {
-	Msg                 uint8
-	Inc                 uint8
-	X, Y, Width, Height uint16
+	Msg           uint8  // message-type
+	Inc           uint8  // incremental
+	X, Y          uint16 // x-, y-position
+	Width, Height uint16 // width, height
 }
 
 // Requests a framebuffer update from the server. There may be an indefinite
@@ -121,10 +124,10 @@ func (c *ClientConn) FramebufferUpdateRequest(inc uint8, x, y, w, h uint16) erro
 
 // KeyEventMessage holds the wire format message.
 type KeyEventMessage struct {
-	Msg      uint8
-	DownFlag uint8
-	_        [2]byte
-	Key      uint32
+	Msg      uint8   // message-type
+	DownFlag uint8   // down-flag
+	_        [2]byte // padding
+	Key      uint32  // key
 }
 
 const (
@@ -171,9 +174,9 @@ const (
 
 // PointerEventMessage holds the wire format message.
 type PointerEventMessage struct {
-	Msg  uint8
-	Mask uint8
-	X, Y uint16
+	Msg  uint8  // message-type
+	Mask uint8  // button-mask
+	X, Y uint16 // x-, y-position
 }
 
 // PointerEvent indicates that pointer movement or a pointer button
@@ -193,45 +196,43 @@ func (c *ClientConn) PointerEvent(mask ButtonMask, x, y uint16) error {
 	return nil
 }
 
+// ClientCutTextMessage holds the wire format message, sans the text field.
+type ClientCutTextMessage struct {
+	Msg    uint8   // message-type
+	_      [3]byte // padding
+	Length uint32  // length
+}
+
 // ClientCutText tells the server that the client has new text in its cut buffer.
 // The text string MUST only contain Latin-1 characters. This encoding
 // is compatible with Go's native string format, but can only use up to
-// unicode.MaxLatin values.
+// unicode.MaxLatin1 values.
 //
 // See RFC 6143 Section 7.5.6
 func (c *ClientConn) ClientCutText(text string) error {
-	var buf bytes.Buffer
-
-	// This is the fixed size data we'll send
-	fixedData := []interface{}{
-		clientCutTextMsg,
-		uint8(0),
-		uint8(0),
-		uint8(0),
-		uint32(len(text)),
-	}
-
-	for _, val := range fixedData {
-		if err := binary.Write(&buf, binary.BigEndian, val); err != nil {
-			return err
-		}
-	}
-
 	for _, char := range text {
 		if char > unicode.MaxLatin1 {
 			return fmt.Errorf("Character '%s' is not valid Latin-1", char)
 		}
-
-		if err := binary.Write(&buf, binary.BigEndian, uint8(char)); err != nil {
-			return err
-		}
 	}
 
-	dataLength := 8 + len(text)
-	if _, err := c.c.Write(buf.Bytes()[0:dataLength]); err != nil {
+	// Strip carriage-return (0x0d) chars.
+	// From RFC: "Ends of lines are represented by the newline character (hex 0a)
+	// alone. No carriage-return (hex 0d) is used."
+	text = strings.Join(strings.Split(text, "\r"), "")
+
+	msg := ClientCutTextMessage{
+		Msg:    clientCutTextMsg,
+		Length: uint32(len(text)),
+	}
+	if err := c.send(msg); err != nil {
+		return err
+	}
+	if err := c.sendN([]byte(text)); err != nil {
 		return err
 	}
 
+	settleUI()
 	return nil
 }
 
