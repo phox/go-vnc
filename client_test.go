@@ -100,13 +100,15 @@ func TestFramebufferUpdateRequest(t *testing.T) {
 		// Send request.
 		err := conn.FramebufferUpdateRequest(tt.inc, tt.x, tt.y, tt.w, tt.h)
 		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+			t.Errorf("unexpected error: %v", err)
+			continue
 		}
 
 		// Validate the request.
 		req := FramebufferUpdateRequestMessage{}
 		if err := conn.receive(&req); err != nil {
-			t.Fatal(err)
+			t.Errorf(err)
+			continue
 		}
 		if req.Msg != framebufferUpdateRequestMsg {
 			t.Errorf("incorrect message-type; got = %v, want = %v", req.Msg, framebufferUpdateRequestMsg)
@@ -172,7 +174,7 @@ func TestKeyEvent(t *testing.T) {
 		// Send request.
 		err := conn.KeyEvent(tt.key, tt.down)
 		if err != nil {
-			t.Errorf("unexpected error %v", err)
+			t.Errorf("unexpected error: %v", err)
 			continue
 		}
 
