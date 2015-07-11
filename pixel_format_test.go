@@ -28,31 +28,31 @@ func TestPixelFormatBytes(t *testing.T) {
 		//
 		// BPP invalid
 		{PixelFormat{BPP: 1, Depth: 1, BigEndian: RFBTrue, TrueColor: RFBFalse},
-			[]uint8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, false},
+			[]uint8{}, false},
 		// Depth invalid
 		{PixelFormat{BPP: 8, Depth: 1, BigEndian: RFBTrue, TrueColor: RFBFalse},
-			[]uint8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, false},
+			[]uint8{}, false},
 		// BPP > Depth
 		{PixelFormat{BPP: 16, Depth: 8, BigEndian: RFBTrue, TrueColor: RFBFalse},
-			[]uint8{0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, false},
+			[]uint8{}, false},
 	}
 
 	for _, tt := range tests {
 		pf := tt.pf
 		b, err := pf.Bytes()
 		if err == nil && !tt.ok {
-			t.Fatal("PixelFormat.Read() expected error", err)
+			t.Error("expected error")
 		}
 		if err != nil {
 			if verr, ok := err.(*VNCError); !ok {
-				t.Errorf("PixelFormat.Read() unexpected %v error: %v", reflect.TypeOf(err), verr)
+				t.Errorf("unexpected %v error: %v", reflect.TypeOf(err), verr)
 			}
 		}
 		if !tt.ok {
 			continue
 		}
 		if got, want := b, tt.b; !operators.EqualSlicesOfByte(got, want) {
-			t.Errorf("PixelFormat.Read() got = %v, want = %v", got, want)
+			t.Errorf("invalid pixel-format; got = %v, want = %v", got, want)
 		}
 	}
 }
@@ -82,21 +82,21 @@ func TestPixelFormatWrite(t *testing.T) {
 		var buf bytes.Buffer
 		buf.Write(tt.b)
 
-		pf := PixelFormat{}
+		var pf PixelFormat
 		err := pf.Write(&buf)
 		if err == nil && !tt.ok {
-			t.Fatal("PixelFormat.Write() expected error", err)
+			t.Error("expected error")
 		}
 		if err != nil {
 			if verr, ok := err.(*VNCError); !ok {
-				t.Errorf("PixelFormat.Write() unexpected %v error: %v", reflect.TypeOf(err), verr)
+				t.Errorf("unexpected %v error: %v", reflect.TypeOf(err), verr)
 			}
 		}
 		if !tt.ok {
 			continue
 		}
-		if !equalPixelFormat(pf, tt.pf) {
-			t.Errorf("PixelFormat.Write() got = %v, want = %v", pf, tt.pf)
+		if got, want := pf, tt.pf; !equalPixelFormat(got, want) {
+			t.Errorf("invalid pixel-format; got = %v, want = %v", pf, tt.pf)
 		}
 	}
 }

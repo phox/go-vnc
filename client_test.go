@@ -2,7 +2,9 @@ package vnc
 
 import (
 	"fmt"
+	"math"
 	"net"
+	"reflect"
 	"testing"
 	"time"
 
@@ -11,7 +13,63 @@ import (
 )
 
 func TestSetPixelFormat(t *testing.T) {
-	t = nil
+	max := uint16(math.Exp2(16))
+	pf := PixelFormat{
+		BPP:       16,
+		Depth:     16,
+		BigEndian: RFBTrue,
+		TrueColor: RFBTrue,
+		RedMax:    max,
+		GreenMax:  max,
+		BlueMax:   max,
+	}
+
+	tests := []struct {
+		pf  PixelFormat
+		msg SetPixelFormatMessage
+	}{
+		{PixelFormat{},
+			SetPixelFormatMessage{
+				Msg: setPixelFormatMsg,
+			}},
+		{NewPixelFormat(),
+			SetPixelFormatMessage{
+				Msg: setPixelFormatMsg,
+				PF:  pf,
+			}},
+	}
+
+	mockConn := &MockConn{}
+	conn := &ClientConn{
+		c:      mockConn,
+		config: &ClientConfig{},
+	}
+
+	for _, tt := range tests {
+		mockConn.Reset()
+
+		// Send request.
+		if err := conn.SetPixelFormat(tt.pf); err != nil {
+			t.Errorf("unexpected error: %v", err)
+			continue
+		}
+
+		// Read the request.
+		req := SetPixelFormatMessage{}
+		if err := conn.receive(&req); err != nil {
+			t.Error(err)
+			continue
+		}
+		if got, want := req.Msg, setPixelFormatMsg; got != want {
+			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
+		}
+		if got, want := req.PF.BPP, tt.msg.PF.BPP; got != want {
+			t.Errorf("incorrect pixel-format bits-per-pixel; got = %v, want = %v", got, want)
+		}
+		if got, want := req.PF.BlueShift, tt.msg.PF.BlueShift; got != want {
+			t.Errorf("incorrect pixel-format blue-shift; got = %v, want = %v", got, want)
+		}
+	}
 }
 
 func TestSetEncodings(t *testing.T) {
@@ -32,8 +90,7 @@ func TestSetEncodings(t *testing.T) {
 		mockConn.Reset()
 
 		// Send request.
-		err := conn.SetEncodings(tt.encs)
-		if err != nil {
+		if err := conn.SetEncodings(tt.encs); err != nil {
 			t.Errorf("unexpected error: %v", err)
 			continue
 		}
@@ -300,12 +357,13 @@ func TestClientCutText(t *testing.T) {
 
 		// Send request.
 		err := conn.ClientCutText(tt.text)
-		if tt.ok && err != nil {
-			t.Errorf("unexpected error: %v", err)
-			continue
-		}
-		if !tt.ok && err == nil {
+		if err == nil && !tt.ok {
 			t.Errorf("expected error")
+		}
+		if err != nil {
+			if verr, ok := err.(*VNCError); !ok {
+				t.Errorf("unexpected %v error: %v", reflect.TypeOf(err), verr)
+			}
 		}
 		if !tt.ok {
 			continue

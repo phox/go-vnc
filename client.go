@@ -5,8 +5,6 @@ See http://tools.ietf.org/html/rfc6143#section-7.5 for more info.
 package vnc
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
 	"strings"
 	"unicode"
@@ -22,29 +20,22 @@ const (
 	clientCutTextMsg
 )
 
+type SetPixelFormatMessage struct {
+	Msg uint8       // message-type
+	_   [3]byte     // padding
+	PF  PixelFormat // pixel-format
+}
+
 // SetPixelFormat sets the format in which pixel values should be sent
 // in FramebufferUpdate messages from the server.
 //
 // See RFC 6143 Section 7.5.1
 func (c *ClientConn) SetPixelFormat(pf PixelFormat) error {
-	var buf bytes.Buffer
-
-	// message-type
-	if err := binary.Write(&buf, binary.BigEndian, setPixelFormatMsg); err != nil {
-		return err
+	msg := SetPixelFormatMessage{
+		Msg: setPixelFormatMsg,
+		PF:  pf,
 	}
-	//padding
-	padding := [3]byte{}
-	buf.Write(padding[:])
-	// pixel-format
-	pfBytes, err := pf.Bytes()
-	if err != nil {
-		return err
-	}
-	buf.Write(pfBytes)
-
-	// Send the data down the connection.
-	if _, err := c.c.Write(buf.Bytes()); err != nil {
+	if err := c.send(msg); err != nil {
 		return err
 	}
 
@@ -212,7 +203,7 @@ type ClientCutTextMessage struct {
 func (c *ClientConn) ClientCutText(text string) error {
 	for _, char := range text {
 		if char > unicode.MaxLatin1 {
-			return fmt.Errorf("Character '%s' is not valid Latin-1", char)
+			return NewVNCError(fmt.Sprintf("Character '%s' is not valid Latin-1", char))
 		}
 	}
 
