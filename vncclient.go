@@ -160,7 +160,7 @@ func (c *ClientConn) ListenAndHandle() error {
 
 	for {
 		var messageType uint8
-		if err := binary.Read(c.c, binary.BigEndian, &messageType); err != nil {
+		if err := c.receive(&messageType); err != nil {
 			fmt.Println("error: reading from server")
 			break
 		}
@@ -187,4 +187,14 @@ func (c *ClientConn) ListenAndHandle() error {
 	}
 
 	return nil
+}
+
+// receivePacket sends a packet to the network.
+func (c *ClientConn) receive(pkt interface{}) error {
+	return binary.Read(c.c, binary.BigEndian, pkt)
+}
+
+// sendPacket sends a packet to the network.
+func (c *ClientConn) send(pkt interface{}) error {
+	return binary.Write(c.c, binary.BigEndian, pkt)
 }

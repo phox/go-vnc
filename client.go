@@ -79,19 +79,19 @@ func (c *ClientConn) SetEncodings(e []Encoding) error {
 	}
 
 	// Send message.
-	if err := binary.Write(c.c, binary.BigEndian, &msg.Msg); err != nil {
+	if err := c.send(&msg.Msg); err != nil {
 		return err
 	}
 	for i := range msg.Pad {
-		if err := binary.Write(c.c, binary.BigEndian, &msg.Pad[i]); err != nil {
+		if err := c.send(&msg.Pad[i]); err != nil {
 			return err
 		}
 	}
-	if err := binary.Write(c.c, binary.BigEndian, &msg.NumEncs); err != nil {
+	if err := c.send(&msg.NumEncs); err != nil {
 		return err
 	}
 	for i := range msg.Encs {
-		if err := binary.Write(c.c, binary.BigEndian, &msg.Encs[i]); err != nil {
+		if err := c.send(&msg.Encs[i]); err != nil {
 			return err
 		}
 	}
@@ -113,7 +113,7 @@ type FramebufferUpdateRequestMessage struct {
 // See RFC 6143 Section 7.5.3
 func (c *ClientConn) FramebufferUpdateRequest(inc uint8, x, y, w, h uint16) error {
 	msg := FramebufferUpdateRequestMessage{framebufferUpdateRequestMsg, inc, x, y, w, h}
-	if err := binary.Write(c.c, binary.BigEndian, &msg); err != nil {
+	if err := c.send(&msg); err != nil {
 		return err
 	}
 	return nil
@@ -145,7 +145,7 @@ func (c *ClientConn) KeyEvent(keysym uint32, down bool) error {
 	}
 
 	msg := KeyEventMessage{keyEventMsg, downFlag, [2]byte{}, keysym}
-	if err := binary.Write(c.c, binary.BigEndian, msg); err != nil {
+	if err := c.send(msg); err != nil {
 		return err
 	}
 
@@ -185,7 +185,7 @@ type PointerEventMessage struct {
 // See RFC 6143 Section 7.5.5
 func (c *ClientConn) PointerEvent(mask ButtonMask, x, y uint16) error {
 	msg := PointerEventMessage{pointerEventMsg, uint8(mask), x, y}
-	if err := binary.Write(c.c, binary.BigEndian, msg); err != nil {
+	if err := c.send(msg); err != nil {
 		return err
 	}
 

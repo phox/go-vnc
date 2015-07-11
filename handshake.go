@@ -4,11 +4,7 @@ See http://tools.ietf.org/html/rfc6143#section-7.1 for more info.
 */
 package vnc
 
-import (
-	"encoding/binary"
-	"fmt"
-	"io"
-)
+import "fmt"
 
 const pvLen = 12 // ProtocolVersion message length.
 
@@ -42,7 +38,7 @@ func (c *ClientConn) protocolVersionHandshake() error {
 	var protocolVersion [pvLen]byte
 
 	// Read the ProtocolVersion message sent by the server.
-	if _, err := io.ReadFull(c.c, protocolVersion[:]); err != nil {
+	if err := c.receive(&protocolVersion); err != nil {
 		return err
 	}
 
@@ -64,7 +60,7 @@ func (c *ClientConn) protocolVersionHandshake() error {
 	c.protocolVersion = pv
 
 	// Respond with the version we will support
-	if _, err = c.c.Write([]byte(pv)); err != nil {
+	if err = c.send([]byte(pv)); err != nil {
 		return err
 	}
 
@@ -93,7 +89,7 @@ func (c *ClientConn) securityHandshake() error {
 
 func (c *ClientConn) securityHandshake33() error {
 	var secType uint32
-	if err := binary.Read(c.c, binary.BigEndian, &secType); err != nil {
+	if err := c.receive(&secType); err != nil {
 		return err
 	}
 
@@ -112,7 +108,7 @@ func (c *ClientConn) securityHandshake33() error {
 	default:
 		return NewVNCError(fmt.Sprintf("Security handshake failed; invalid security type: %v", secType))
 	}
-	if err := auth.Handshake(c.c); err != nil {
+	if err := auth.Handshake(c); err != nil {
 		return err
 	}
 
@@ -122,7 +118,7 @@ func (c *ClientConn) securityHandshake33() error {
 func (c *ClientConn) securityHandshake38() error {
 	// Determine server supported security types.
 	var numSecurityTypes uint8
-	if err := binary.Read(c.c, binary.BigEndian, &numSecurityTypes); err != nil {
+	if err := c.receive(&numSecurityTypes); err != nil {
 		return err
 	}
 	if numSecurityTypes == 0 {
@@ -133,7 +129,7 @@ func (c *ClientConn) securityHandshake38() error {
 		return NewVNCError(fmt.Sprintf("Security handshake failed; no security types: %v", reason))
 	}
 	securityTypes := make([]uint8, numSecurityTypes)
-	if err := binary.Read(c.c, binary.BigEndian, &securityTypes); err != nil {
+	if err := c.receive(&securityTypes); err != nil {
 		return err
 	}
 
@@ -153,11 +149,11 @@ FindAuth:
 	if auth == nil {
 		return NewVNCError(fmt.Sprintf("Security handshake failed; no suitable auth schemes found; server supports: %#v", securityTypes))
 	}
-	if err := binary.Write(c.c, binary.BigEndian, auth.SecurityType()); err != nil {
+	if err := c.send(auth.SecurityType()); err != nil {
 		return err
 	}
 
-	if err := auth.Handshake(c.c); err != nil {
+	if err := auth.Handshake(c); err != nil {
 		return err
 	}
 	return nil
@@ -171,7 +167,7 @@ func (c *ClientConn) securityResultHandshake() error {
 	}
 
 	var securityResult uint32
-	if err := binary.Read(c.c, binary.BigEndian, &securityResult); err != nil {
+	if err := c.receive(&securityResult); err != nil {
 		return err
 	}
 	if securityResult == 1 {
@@ -187,12 +183,12 @@ func (c *ClientConn) securityResultHandshake() error {
 // TODO(kward): need a context for timeout
 func (c *ClientConn) readErrorReason() (string, error) {
 	var reasonLen uint32
-	if err := binary.Read(c.c, binary.BigEndian, &reasonLen); err != nil {
+	if err := c.receive(&reasonLen); err != nil {
 		return "", err
 	}
 
 	reason := make([]uint8, reasonLen)
-	if err := binary.Read(c.c, binary.BigEndian, &reason); err != nil {
+	if err := c.receive(&reason); err != nil {
 		return "", err
 	}
 

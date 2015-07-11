@@ -1,9 +1,6 @@
 package vnc
 
-import (
-	"encoding/binary"
-	"testing"
-)
+import "testing"
 
 func TestFramebufferUpdate(t *testing.T) {
 	tests := []struct {
@@ -23,38 +20,38 @@ func TestFramebufferUpdate(t *testing.T) {
 
 		// Send the message.
 		msg := NewFramebufferUpdateMessage(tt.rects)
-		if err := binary.Write(conn.c, binary.BigEndian, &msg.Msg); err != nil {
+		if err := conn.send(&msg.Msg); err != nil {
 			t.Fatal(err)
 		}
 		for i := range msg.Pad {
-			if err := binary.Write(conn.c, binary.BigEndian, &msg.Pad[i]); err != nil {
+			if err := conn.send(&msg.Pad[i]); err != nil {
 				t.Fatal(err)
 			}
 		}
-		if err := binary.Write(conn.c, binary.BigEndian, &msg.NumRect); err != nil {
+		if err := conn.send(&msg.NumRect); err != nil {
 			t.Fatal(err)
 		}
 		for _, r := range msg.Rects {
-			if err := binary.Write(conn.c, binary.BigEndian, &r.X); err != nil {
+			if err := conn.send(&r.X); err != nil {
 				t.Fatal(err)
 			}
-			if err := binary.Write(conn.c, binary.BigEndian, &r.Y); err != nil {
+			if err := conn.send(&r.Y); err != nil {
 				t.Fatal(err)
 			}
-			if err := binary.Write(conn.c, binary.BigEndian, &r.Width); err != nil {
+			if err := conn.send(&r.Width); err != nil {
 				t.Fatal(err)
 			}
-			if err := binary.Write(conn.c, binary.BigEndian, &r.Height); err != nil {
+			if err := conn.send(&r.Height); err != nil {
 				t.Fatal(err)
 			}
-			if err := binary.Write(conn.c, binary.BigEndian, r.Enc.Type()); err != nil {
+			if err := conn.send(r.Enc.Type()); err != nil {
 				t.Fatal(err)
 			}
 		}
 
 		// Validate message handling.
 		var messageType uint8
-		if err := binary.Read(conn.c, binary.BigEndian, &messageType); err != nil {
+		if err := conn.receive(&messageType); err != nil {
 			t.Fatal(err)
 		}
 		fu := NewFramebufferUpdateMessage([]Rectangle{})
@@ -86,8 +83,12 @@ func TestFramebufferUpdate(t *testing.T) {
 	}
 }
 
-func TestSetColorMapEntries(t *testing.T) {}
+func TestSetColorMapEntries(t *testing.T) {
 
-func TestBell(t *testing.T) {}
+}
+
+func TestBell(t *testing.T) {
+
+}
 
 func TestServerCutText(t *testing.T) {}

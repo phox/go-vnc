@@ -1,7 +1,6 @@
 package vnc
 
 import (
-	"encoding/binary"
 	"fmt"
 	"net"
 	"testing"
@@ -39,21 +38,21 @@ func TestSetEncodings(t *testing.T) {
 
 		// Read the request.
 		req := SetEncodingsMessage{}
-		if err := binary.Read(conn.c, binary.BigEndian, &req.Msg); err != nil {
+		if err := conn.receive(&req.Msg); err != nil {
 			t.Fatal(err)
 		}
 		for i := range req.Pad {
-			if err := binary.Read(conn.c, binary.BigEndian, &req.Pad[i]); err != nil {
+			if err := conn.receive(&req.Pad[i]); err != nil {
 				t.Fatal(err)
 			}
 		}
-		if err := binary.Read(conn.c, binary.BigEndian, &req.NumEncs); err != nil {
+		if err := conn.receive(&req.NumEncs); err != nil {
 			t.Fatal(err)
 		}
 		var encs []int32 // Can't use the request struct.
 		for i := 0; i < len(tt.encs); i++ {
 			var enc int32
-			if err := binary.Read(conn.c, binary.BigEndian, &enc); err != nil {
+			if err := conn.receive(&enc); err != nil {
 				t.Fatal(err)
 			}
 			encs = append(encs, enc)
@@ -100,7 +99,7 @@ func TestFramebufferUpdateRequest(t *testing.T) {
 
 		// Validate the request.
 		req := FramebufferUpdateRequestMessage{}
-		if err := binary.Read(conn.c, binary.BigEndian, &req); err != nil {
+		if err := conn.receive(&req); err != nil {
 			t.Fatal(err)
 		}
 		if req.Msg != framebufferUpdateRequestMsg {
@@ -172,7 +171,7 @@ func TestKeyEvent(t *testing.T) {
 
 		// Validate the request.
 		req := KeyEventMessage{}
-		if err := binary.Read(conn.c, binary.BigEndian, &req); err != nil {
+		if err := conn.receive(&req); err != nil {
 			t.Fatal(err)
 		}
 		var down bool
@@ -247,7 +246,7 @@ func TestPointerEvent(t *testing.T) {
 
 		// Validate the request.
 		req := PointerEventMessage{}
-		if err := binary.Read(conn.c, binary.BigEndian, &req); err != nil {
+		if err := conn.receive(&req); err != nil {
 			t.Fatal(err)
 		}
 		if got, want := req.Msg, pointerEventMsg; got != want {
