@@ -3,6 +3,7 @@ package vnc
 import (
 	"fmt"
 	"net"
+	"reflect"
 	"testing"
 	"time"
 
@@ -300,12 +301,13 @@ func TestClientCutText(t *testing.T) {
 
 		// Send request.
 		err := conn.ClientCutText(tt.text)
-		if tt.ok && err != nil {
-			t.Errorf("unexpected error: %v", err)
-			continue
-		}
-		if !tt.ok && err == nil {
+		if err == nil && !tt.ok {
 			t.Errorf("expected error")
+		}
+		if err != nil {
+			if verr, ok := err.(*VNCError); !ok {
+				t.Errorf("unexpected %v error: %v", reflect.TypeOf(err), verr)
+			}
 		}
 		if !tt.ok {
 			continue

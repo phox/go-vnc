@@ -212,7 +212,7 @@ type ClientCutTextMessage struct {
 func (c *ClientConn) ClientCutText(text string) error {
 	for _, char := range text {
 		if char > unicode.MaxLatin1 {
-			return fmt.Errorf("Character '%s' is not valid Latin-1", char)
+			return NewVNCError(fmt.Sprintf("Character '%s' is not valid Latin-1", char))
 		}
 	}
 
