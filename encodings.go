@@ -33,7 +33,7 @@ type Encoding interface {
 }
 
 // RawEncoding is raw pixel data sent by the server.
-// See RFC 6143 Section 7.7.1
+// See RFC 6143 §7.7.1.
 type RawEncoding struct {
 	Colors []Color
 }
@@ -43,7 +43,7 @@ func NewRawEncoding(c []Color) *RawEncoding {
 	return &RawEncoding{c}
 }
 
-func (e *RawEncoding) Type() int32 {
+func (*RawEncoding) Type() int32 {
 	return Raw
 }
 
@@ -84,4 +84,19 @@ func (*RawEncoding) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding,
 	}
 
 	return NewRawEncoding(colors), nil
+}
+
+// DesktopSizePseudoEncoding enables desktop resize support.
+// See RFC 6143 §7.8.2.
+type DesktopSizePseudoEncoding struct{}
+
+func (*DesktopSizePseudoEncoding) Type() int32 {
+	return DesktopSizePseudo
+}
+
+func (*DesktopSizePseudoEncoding) Read(c *ClientConn, rect *Rectangle, _ io.Reader) (Encoding, error) {
+	c.fbWidth = rect.Width
+	c.fbHeight = rect.Height
+
+	return &DesktopSizePseudoEncoding{}, nil
 }
