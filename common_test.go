@@ -28,21 +28,3 @@ func (m *MockConn) SetWriteDeadline(t time.Time) error { return nil }
 func (m *MockConn) Reset() {
 	m.b.Reset()
 }
-
-func EqualSlicesOfByte(x, y []byte) bool {
-	// Special cases.
-	switch {
-	case x == nil && y == nil:
-		return true
-	case x == nil || y == nil:
-		return false
-	case len(x) != len(y):
-		return false
-	}
-	for i, v := range x {
-		if v != y[i] {
-			return false
-		}
-	}
-	return true
-}

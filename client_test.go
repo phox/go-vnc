@@ -1,17 +1,77 @@
 package vnc
 
 import (
-	"encoding/binary"
 	"fmt"
+	"math"
 	"net"
+	"reflect"
 	"testing"
 	"time"
 
+	"github.com/kward/go-vnc/go/operators"
 	"golang.org/x/net/context"
 )
 
 func TestSetPixelFormat(t *testing.T) {
-	t = nil
+	max := uint16(math.Exp2(16))
+	pf := PixelFormat{
+		BPP:       16,
+		Depth:     16,
+		BigEndian: RFBTrue,
+		TrueColor: RFBTrue,
+		RedMax:    max,
+		GreenMax:  max,
+		BlueMax:   max,
+	}
+
+	tests := []struct {
+		pf  PixelFormat
+		msg SetPixelFormatMessage
+	}{
+		{PixelFormat{},
+			SetPixelFormatMessage{
+				Msg: setPixelFormatMsg,
+			}},
+		{NewPixelFormat(),
+			SetPixelFormatMessage{
+				Msg: setPixelFormatMsg,
+				PF:  pf,
+			}},
+	}
+
+	mockConn := &MockConn{}
+	conn := &ClientConn{
+		c:      mockConn,
+		config: &ClientConfig{},
+	}
+
+	for _, tt := range tests {
+		mockConn.Reset()
+
+		// Send request.
+		if err := conn.SetPixelFormat(tt.pf); err != nil {
+			t.Errorf("unexpected error: %v", err)
+			continue
+		}
+
+		// Read back in.
+		req := SetPixelFormatMessage{}
+		if err := conn.receive(&req); err != nil {
+			t.Error(err)
+			continue
+		}
+
+		// Validate the request.
+		if got, want := req.Msg, setPixelFormatMsg; got != want {
+			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
+		}
+		if got, want := req.PF.BPP, tt.msg.PF.BPP; got != want {
+			t.Errorf("incorrect pixel-format bits-per-pixel; got = %v, want = %v", got, want)
+		}
+		if got, want := req.PF.BlueShift, tt.msg.PF.BlueShift; got != want {
+			t.Errorf("incorrect pixel-format blue-shift; got = %v, want = %v", got, want)
+		}
+	}
 }
 
 func TestSetEncodings(t *testing.T) {
@@ -32,43 +92,37 @@ func TestSetEncodings(t *testing.T) {
 		mockConn.Reset()
 
 		// Send request.
-		err := conn.SetEncodings(tt.encs)
-		if err != nil {
-			t.Fatalf("SendEncodingsMessage() unexpected error %v", err)
+		if err := conn.SetEncodings(tt.encs); err != nil {
+			t.Errorf("unexpected error: %v", err)
+			continue
 		}
 
-		// Read the request.
+		// Read back in.
 		req := SetEncodingsMessage{}
-		if err := binary.Read(conn.c, binary.BigEndian, &req.Msg); err != nil {
-			t.Fatal(err)
-		}
-		for i := range req.Pad {
-			if err := binary.Read(conn.c, binary.BigEndian, &req.Pad[i]); err != nil {
-				t.Fatal(err)
-			}
-		}
-		if err := binary.Read(conn.c, binary.BigEndian, &req.NumEncs); err != nil {
-			t.Fatal(err)
+		if err := conn.receive(&req); err != nil {
+			t.Error(err)
+			continue
 		}
 		var encs []int32 // Can't use the request struct.
-		for i := 0; i < len(tt.encs); i++ {
-			var enc int32
-			if err := binary.Read(conn.c, binary.BigEndian, &enc); err != nil {
-				t.Fatal(err)
-			}
-			encs = append(encs, enc)
+		if err := conn.receiveN(&encs, int(req.NumEncs)); err != nil {
+			t.Error(err)
+			continue
 		}
 
 		// Validate the request.
-		if req.Msg != setEncodingsMsg {
-			t.Errorf("SetEncodings() incorrect message-type; got = %v, want = %v", req.Msg, setEncodingsMsg)
+		if got, want := req.Msg, setEncodingsMsg; got != want {
+			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
 		}
-		if req.NumEncs != uint16(len(tt.encs)) {
-			t.Errorf("SetEncodings() incorrect number of encodings; got = %v, want = %v", req.NumEncs, len(tt.encs))
+		if got, want := req.NumEncs, uint16(len(tt.encs)); got != want {
+			t.Errorf("incorrect number-of-encodings; got = %v, want = %v", got, want)
+		}
+		if got, want := len(encs), len(tt.encs); got != want {
+			t.Errorf("lengths of encodings don't match; got = %v, want = %v", got, want)
+			continue
 		}
 		for i := 0; i < len(tt.encs); i++ {
-			if encs[i] != tt.encs[i].Type() {
-				t.Errorf("SetEncodings() incorrect encoding [%v}]; got = %v, want = %v", i, req.Encs[i], tt.encs[i].Type())
+			if got, want := encs[i], tt.encs[i].Type(); got != want {
+				t.Errorf("incorrect encoding-type [%v]; got = %v, want = %v", i, got, want)
 			}
 		}
 	}
@@ -95,31 +149,35 @@ func TestFramebufferUpdateRequest(t *testing.T) {
 		// Send request.
 		err := conn.FramebufferUpdateRequest(tt.inc, tt.x, tt.y, tt.w, tt.h)
 		if err != nil {
-			t.Fatalf("FramebufferUpdateRequest() unexpected error %v", err)
+			t.Errorf("unexpected error: %v", err)
+			continue
+		}
+
+		// Read back in.
+		req := FramebufferUpdateRequestMessage{}
+		if err := conn.receive(&req); err != nil {
+			t.Error(err)
+			continue
 		}
 
 		// Validate the request.
-		req := FramebufferUpdateRequestMessage{}
-		if err := binary.Read(conn.c, binary.BigEndian, &req); err != nil {
-			t.Fatal(err)
-		}
 		if req.Msg != framebufferUpdateRequestMsg {
-			t.Errorf("FramebufferUpdateRequest() incorrect message-type; got = %v, want = %v", req.Msg, framebufferUpdateRequestMsg)
+			t.Errorf("incorrect message-type; got = %v, want = %v", req.Msg, framebufferUpdateRequestMsg)
 		}
 		if req.Inc != tt.inc {
-			t.Errorf("FramebufferUpdateRequest() incremental incorrect; got = %v, want = %v", req.Inc, tt.inc)
+			t.Errorf("incorrect incremental; got = %v, want = %v", req.Inc, tt.inc)
 		}
 		if req.X != tt.x {
-			t.Errorf("FramebufferUpdateRequest() X incorrect; got = %v, want = %v", req.X, tt.x)
+			t.Errorf("incorrect x-position; got = %v, want = %v", req.X, tt.x)
 		}
 		if req.Y != tt.y {
-			t.Errorf("FramebufferUpdateRequest() Y incorrect; got = %v, want = %v", req.Y, tt.y)
+			t.Errorf("incorrect y-position; got = %v, want = %v", req.Y, tt.y)
 		}
 		if req.Width != tt.w {
-			t.Errorf("FramebufferUpdateRequest() X incorrect; got = %v, want = %v", req.Width, tt.w)
+			t.Errorf("incorrect width; got = %v, want = %v", req.Width, tt.w)
 		}
 		if req.Height != tt.h {
-			t.Errorf("FramebufferUpdateRequest() X incorrect; got = %v, want = %v", req.Height, tt.h)
+			t.Errorf("incorrect height; got = %v, want = %v", req.Height, tt.h)
 		}
 	}
 }
@@ -145,7 +203,58 @@ func ExampleClientConn_KeyEvent() {
 	vc.Close()
 }
 
-func TestKeyEvent(t *testing.T) {}
+func TestKeyEvent(t *testing.T) {
+	tests := []struct {
+		key  uint32
+		down bool
+	}{
+		{Key0, PressKey},
+		{Key1, ReleaseKey},
+	}
+
+	mockConn := &MockConn{}
+	conn := &ClientConn{
+		c:      mockConn,
+		config: &ClientConfig{},
+	}
+
+	SetSettle(0) // Disable UI settling for tests.
+	for _, tt := range tests {
+		mockConn.Reset()
+
+		// Send request.
+		err := conn.KeyEvent(tt.key, tt.down)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+			continue
+		}
+
+		// Read back in.
+		var req KeyEventMessage
+		if err := conn.receive(&req); err != nil {
+			t.Error(err)
+			continue
+		}
+
+		// Validate the request.
+		if got, want := req.Msg, keyEventMsg; got != want {
+			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
+		}
+		var down bool
+		switch req.DownFlag {
+		case RFBTrue:
+			down = PressKey
+		case RFBFalse:
+			down = ReleaseKey
+		}
+		if got, want := down, tt.down; got != want {
+			t.Errorf("incorrect down-flag; got = %v, want = %v", got, want)
+		}
+		if got, want := req.Key, tt.key; got != want {
+			t.Errorf("incorrect key; got = %v, want = %v", got, want)
+		}
+	}
+}
 
 func ExampleClientConn_PointerEvent() {
 	// Establish TCP connection.
@@ -164,9 +273,6 @@ func ExampleClientConn_PointerEvent() {
 	x, y := uint16(100), uint16(200)
 	vc.PointerEvent(ButtonNone, x, y)
 
-	// Give the mouse some time to "settle" after moving.
-	time.Sleep(10 * time.Millisecond)
-
 	// Click and release the left mouse button.
 	vc.PointerEvent(ButtonLeft, x, y)
 	vc.PointerEvent(ButtonNone, x, y)
@@ -175,6 +281,112 @@ func ExampleClientConn_PointerEvent() {
 	vc.Close()
 }
 
-func TestPointerEvent(t *testing.T) {}
+func TestPointerEvent(t *testing.T) {
+	tests := []struct {
+		mask ButtonMask
+		x, y uint16
+	}{
+		{ButtonNone, 0, 0},
+		{ButtonLeft | ButtonRight, 123, 456},
+	}
 
-func TestClientCutText(t *testing.T) {}
+	mockConn := &MockConn{}
+	conn := &ClientConn{
+		c:      mockConn,
+		config: &ClientConfig{},
+	}
+
+	SetSettle(0) // Disable UI settling for tests.
+	for _, tt := range tests {
+		mockConn.Reset()
+
+		// Send request.
+		err := conn.PointerEvent(tt.mask, tt.x, tt.y)
+		if err != nil {
+			t.Errorf("unexpected error: %v", err)
+			continue
+		}
+
+		// Read back in.
+		req := PointerEventMessage{}
+		if err := conn.receive(&req); err != nil {
+			t.Error(err)
+			continue
+		}
+
+		// Validate the request.
+		if got, want := req.Msg, pointerEventMsg; got != want {
+			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
+		}
+		if got, want := req.Mask, uint8(tt.mask); got != want {
+			t.Errorf("incorrect button-mask; got = %v, want = %v", got, want)
+		}
+		if got, want := req.X, tt.x; got != want {
+			t.Errorf("incorrect x-position; got = %v, want = %v", got, want)
+		}
+		if got, want := req.Y, tt.y; got != want {
+			t.Errorf("incorrect y-position; got = %v, want = %v", got, want)
+		}
+	}
+}
+
+func TestClientCutText(t *testing.T) {
+	tests := []struct {
+		text string
+		sent []byte
+		ok   bool
+	}{
+		{"abc123", []byte("abc123"), true},
+		{"foo\r\nbar", []byte("foo\nbar"), true},
+		{"", []byte{}, true},
+		{"ɹɐqooɟ", []byte{}, false},
+	}
+
+	mockConn := &MockConn{}
+	conn := &ClientConn{
+		c:      mockConn,
+		config: &ClientConfig{},
+	}
+
+	SetSettle(0) // Disable UI settling for tests.
+	for _, tt := range tests {
+		mockConn.Reset()
+
+		// Send request.
+		err := conn.ClientCutText(tt.text)
+		if err == nil && !tt.ok {
+			t.Errorf("expected error")
+		}
+		if err != nil {
+			if verr, ok := err.(*VNCError); !ok {
+				t.Errorf("unexpected %v error: %v", reflect.TypeOf(err), verr)
+			}
+		}
+		if !tt.ok {
+			continue
+		}
+
+		// Read back in.
+		req := ClientCutTextMessage{}
+		if err := conn.receive(&req); err != nil {
+			t.Error(err)
+			continue
+		}
+		var text []byte
+		if err := conn.receiveN(&text, int(req.Length)); err != nil {
+			t.Error(err)
+			continue
+		}
+
+		// Validate the request.
+		if got, want := req.Msg, clientCutTextMsg; got != want {
+			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
+		}
+		if got, want := req.Length, uint32(len(tt.sent)); got != want {
+			t.Errorf("incorrect length; got = %v, want = %v", got, want)
+		}
+		if got, want := text, tt.sent; !operators.EqualSlicesOfByte(got, want) {
+			t.Errorf("incorrect text; got = %v, want = %v", got, want)
+		}
+	}
+}

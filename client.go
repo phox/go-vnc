@@ -5,9 +5,8 @@ See http://tools.ietf.org/html/rfc6143#section-7.5 for more info.
 package vnc
 
 import (
-	"bytes"
-	"encoding/binary"
 	"fmt"
+	"strings"
 	"unicode"
 )
 
@@ -21,29 +20,23 @@ const (
 	clientCutTextMsg
 )
 
+// SetPixelFormatMessage holds the wire format message.
+type SetPixelFormatMessage struct {
+	Msg uint8       // message-type
+	_   [3]byte     // padding
+	PF  PixelFormat // pixel-format
+}
+
 // SetPixelFormat sets the format in which pixel values should be sent
 // in FramebufferUpdate messages from the server.
 //
 // See RFC 6143 Section 7.5.1
 func (c *ClientConn) SetPixelFormat(pf PixelFormat) error {
-	var buf bytes.Buffer
-
-	// message-type
-	if err := binary.Write(&buf, binary.BigEndian, setPixelFormatMsg); err != nil {
-		return err
+	msg := SetPixelFormatMessage{
+		Msg: setPixelFormatMsg,
+		PF:  pf,
 	}
-	//padding
-	padding := [3]byte{}
-	buf.Write(padding[:])
-	// pixel-format
-	pfBytes, err := pf.Bytes()
-	if err != nil {
-		return err
-	}
-	buf.Write(pfBytes)
-
-	// Send the data down the connection.
-	if _, err := c.c.Write(buf.Bytes()); err != nil {
+	if err := c.send(msg); err != nil {
 		return err
 	}
 
@@ -56,11 +49,11 @@ func (c *ClientConn) SetPixelFormat(pf PixelFormat) error {
 	return nil
 }
 
+// SetEncodingsMessage holds the wire format message, sans encoding-type field.
 type SetEncodingsMessage struct {
 	Msg     uint8   // message-type
-	Pad     [1]byte // padding
+	_       [1]byte // padding
 	NumEncs uint16  // number-of-encodings
-	Encs    []int32 // encoding-type
 }
 
 // SetEncodings sets the encoding types in which the pixel data can be sent
@@ -74,36 +67,30 @@ func (c *ClientConn) SetEncodings(e []Encoding) error {
 		Msg:     setEncodingsMsg,
 		NumEncs: uint16(len(e)),
 	}
+	var encs []int32 // encoding-type
+
 	for _, v := range e {
-		msg.Encs = append(msg.Encs, int32(v.Type()))
+		encs = append(encs, int32(v.Type()))
 	}
 
 	// Send message.
-	if err := binary.Write(c.c, binary.BigEndian, &msg.Msg); err != nil {
+	if err := c.send(msg); err != nil {
 		return err
 	}
-	for i := range msg.Pad {
-		if err := binary.Write(c.c, binary.BigEndian, &msg.Pad[i]); err != nil {
-			return err
-		}
-	}
-	if err := binary.Write(c.c, binary.BigEndian, &msg.NumEncs); err != nil {
+	if err := c.sendN(encs); err != nil {
 		return err
 	}
-	for i := range msg.Encs {
-		if err := binary.Write(c.c, binary.BigEndian, &msg.Encs[i]); err != nil {
-			return err
-		}
-	}
-	c.encodings = e
 
+	c.encodings = e
 	return nil
 }
 
-// FramebufferUpdateRequestMessage defines a FramebufferUpdateRequest message.
+// FramebufferUpdateRequestMessage holds the wire format message.
 type FramebufferUpdateRequestMessage struct {
-	Msg, Inc            uint8
-	X, Y, Width, Height uint16
+	Msg           uint8  // message-type
+	Inc           uint8  // incremental
+	X, Y          uint16 // x-, y-position
+	Width, Height uint16 // width, height
 }
 
 // Requests a framebuffer update from the server. There may be an indefinite
@@ -112,11 +99,24 @@ type FramebufferUpdateRequestMessage struct {
 // See RFC 6143 Section 7.5.3
 func (c *ClientConn) FramebufferUpdateRequest(inc uint8, x, y, w, h uint16) error {
 	msg := FramebufferUpdateRequestMessage{framebufferUpdateRequestMsg, inc, x, y, w, h}
-	if err := binary.Write(c.c, binary.BigEndian, &msg); err != nil {
+	if err := c.send(&msg); err != nil {
 		return err
 	}
 	return nil
 }
+
+// KeyEventMessage holds the wire format message.
+type KeyEventMessage struct {
+	Msg      uint8   // message-type
+	DownFlag uint8   // down-flag
+	_        [2]byte // padding
+	Key      uint32  // key
+}
+
+const (
+	PressKey   = true
+	ReleaseKey = false
+)
 
 // KeyEvent indicates a key press or release and sends it to the server.
 // The key is indicated using the X Window System "keysym" value. Use
@@ -125,103 +125,19 @@ func (c *ClientConn) FramebufferUpdateRequest(inc uint8, x, y, w, h uint16) erro
 //
 // See RFC 6143 Section 7.5.4.
 func (c *ClientConn) KeyEvent(keysym uint32, down bool) error {
-	var downFlag uint8 = 0
+	var downFlag uint8 = RFBFalse
 	if down {
-		downFlag = 1
+		downFlag = RFBTrue
 	}
 
-	data := []interface{}{
-		keyEventMsg,
-		downFlag,
-		uint8(0),
-		uint8(0),
-		keysym,
-	}
-
-	for _, val := range data {
-		if err := binary.Write(c.c, binary.BigEndian, val); err != nil {
-			return err
-		}
-	}
-
-	return nil
-}
-
-// PointerEvent indicates that pointer movement or a pointer button
-// press or release.
-//
-// The mask is a bitwise mask of various ButtonMask values. When a button
-// is set, it is pressed, when it is unset, it is released.
-//
-// See RFC 6143 Section 7.5.5
-func (c *ClientConn) PointerEvent(mask ButtonMask, x, y uint16) error {
-	var buf bytes.Buffer
-
-	data := []interface{}{
-		pointerEventMsg,
-		uint8(mask),
-		x,
-		y,
-	}
-
-	for _, val := range data {
-		if err := binary.Write(&buf, binary.BigEndian, val); err != nil {
-			return err
-		}
-	}
-
-	if _, err := c.c.Write(buf.Bytes()[0:6]); err != nil {
+	msg := KeyEventMessage{keyEventMsg, downFlag, [2]byte{}, keysym}
+	if err := c.send(msg); err != nil {
 		return err
 	}
 
+	settleUI()
 	return nil
 }
-
-// ClientCutText tells the server that the client has new text in its cut buffer.
-// The text string MUST only contain Latin-1 characters. This encoding
-// is compatible with Go's native string format, but can only use up to
-// unicode.MaxLatin values.
-//
-// See RFC 6143 Section 7.5.6
-func (c *ClientConn) ClientCutText(text string) error {
-	var buf bytes.Buffer
-
-	// This is the fixed size data we'll send
-	fixedData := []interface{}{
-		clientCutTextMsg,
-		uint8(0),
-		uint8(0),
-		uint8(0),
-		uint32(len(text)),
-	}
-
-	for _, val := range fixedData {
-		if err := binary.Write(&buf, binary.BigEndian, val); err != nil {
-			return err
-		}
-	}
-
-	for _, char := range text {
-		if char > unicode.MaxLatin1 {
-			return fmt.Errorf("Character '%s' is not valid Latin-1", char)
-		}
-
-		if err := binary.Write(&buf, binary.BigEndian, uint8(char)); err != nil {
-			return err
-		}
-	}
-
-	dataLength := 8 + len(text)
-	if _, err := c.c.Write(buf.Bytes()[0:dataLength]); err != nil {
-		return err
-	}
-
-	return nil
-}
-
-//
-// Constants to use for KeyEvents PointerEvents.
-//
 
 // ButtonMask represents a mask of pointer presses/releases.
 type ButtonMask uint8
@@ -238,6 +154,74 @@ const (
 	Button8
 	ButtonNone = ButtonMask(0)
 )
+
+// PointerEventMessage holds the wire format message.
+type PointerEventMessage struct {
+	Msg  uint8  // message-type
+	Mask uint8  // button-mask
+	X, Y uint16 // x-, y-position
+}
+
+// PointerEvent indicates that pointer movement or a pointer button
+// press or release.
+//
+// The mask is a bitwise mask of various ButtonMask values. When a button
+// is set, it is pressed, when it is unset, it is released.
+//
+// See RFC 6143 Section 7.5.5
+func (c *ClientConn) PointerEvent(mask ButtonMask, x, y uint16) error {
+	msg := PointerEventMessage{pointerEventMsg, uint8(mask), x, y}
+	if err := c.send(msg); err != nil {
+		return err
+	}
+
+	settleUI()
+	return nil
+}
+
+// ClientCutTextMessage holds the wire format message, sans the text field.
+type ClientCutTextMessage struct {
+	Msg    uint8   // message-type
+	_      [3]byte // padding
+	Length uint32  // length
+}
+
+// ClientCutText tells the server that the client has new text in its cut buffer.
+// The text string MUST only contain Latin-1 characters. This encoding
+// is compatible with Go's native string format, but can only use up to
+// unicode.MaxLatin1 values.
+//
+// See RFC 6143 Section 7.5.6
+func (c *ClientConn) ClientCutText(text string) error {
+	for _, char := range text {
+		if char > unicode.MaxLatin1 {
+			return NewVNCError(fmt.Sprintf("Character '%s' is not valid Latin-1", char))
+		}
+	}
+
+	// Strip carriage-return (0x0d) chars.
+	// From RFC: "Ends of lines are represented by the newline character (0x0a)
+	// alone. No carriage-return (0x0d) is used."
+	text = strings.Join(strings.Split(text, "\r"), "")
+
+	msg := ClientCutTextMessage{
+		Msg:    clientCutTextMsg,
+		Length: uint32(len(text)),
+	}
+	if err := c.send(msg); err != nil {
+		return err
+	}
+	if err := c.sendN([]byte(text)); err != nil {
+		return err
+	}
+
+	settleUI()
+	return nil
+}
+
+//
+// Constants to use for KeyEvents PointerEvents.
+//
 
 // Latin 1 (byte 3 = 0)
 // ISO/IEC 8859-1 = Unicode U+0020..U+00FF
@@ -388,6 +372,5 @@ const (
 	_
 	KeyAltLeft
 	KeyAltRight
-
 	KeyDelete = 0xffff
 )

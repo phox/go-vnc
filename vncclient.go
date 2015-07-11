@@ -7,10 +7,13 @@ References:
 package vnc
 
 import (
+	"bytes"
 	"encoding/binary"
 	"fmt"
 	"net"
+	"reflect"
 
+	"github.com/kward/go-vnc/go/metrics"
 	"golang.org/x/net/context"
 )
 
@@ -19,6 +22,10 @@ func Connect(ctx context.Context, c net.Conn, cfg *ClientConfig) (*ClientConn, e
 	conn := &ClientConn{
 		c:      c,
 		config: cfg,
+		metrics: map[string]metrics.Metric{
+			"bytes-received": &metrics.Gauge{},
+			"bytes-sent":     &metrics.Gauge{},
+		},
 	}
 
 	if err := conn.protocolVersionHandshake(); err != nil {
@@ -123,6 +130,9 @@ type ClientConn struct {
 	// be modified. If you wish to set a new pixel format, use the
 	// SetPixelFormat method.
 	pixelFormat PixelFormat
+
+	// Track metrics on system performance.
+	metrics map[string]metrics.Metric
 }
 
 // Close a connection to a VNC server.
@@ -165,7 +175,7 @@ func (c *ClientConn) ListenAndHandle() error {
 
 	for {
 		var messageType uint8
-		if err := binary.Read(c.c, binary.BigEndian, &messageType); err != nil {
+		if err := c.receive(&messageType); err != nil {
 			fmt.Println("error: reading from server")
 			break
 		}
@@ -191,5 +201,74 @@ func (c *ClientConn) ListenAndHandle() error {
 		c.config.ServerMessageCh <- parsedMsg
 	}
 
+	return nil
+}
+
+// receive a packet from the network.
+func (c *ClientConn) receive(data interface{}) error {
+	if err := binary.Read(c.c, binary.BigEndian, data); err != nil {
+		return err
+	}
+	//c.metrics["bytes-received"].Adjust(int64(binary.Size(data)))
+	return nil
+}
+
+// receiveN receives N bytes from the network.
+func (c *ClientConn) receiveN(data interface{}, n int) error {
+	switch data.(type) {
+	case *[]uint8:
+		var v uint8
+		for i := 0; i < n; i++ {
+			if err := binary.Read(c.c, binary.BigEndian, &v); err != nil {
+				return err
+			}
+			slice := data.(*[]uint8)
+			*slice = append(*slice, v)
+		}
+	case *[]int32:
+		var v int32
+		for i := 0; i < n; i++ {
+			if err := binary.Read(c.c, binary.BigEndian, &v); err != nil {
+				return err
+			}
+			slice := data.(*[]int32)
+			*slice = append(*slice, v)
+		}
+	default:
+		return NewVNCError(fmt.Sprintf("Unable to receive data; unrecognized data type %v", reflect.TypeOf(data)))
+	}
+	//c.metrics["bytes-received"].Adjust(int64(binary.Size(data)))
+	return nil
+}
+
+// send a packet to the network.
+func (c *ClientConn) send(data interface{}) error {
+	//c.metrics["bytes-sent"].Adjust(int64(binary.Size(data)))
+	return binary.Write(c.c, binary.BigEndian, data)
+}
+
+// sendN sends N bytes to the network.
+func (c *ClientConn) sendN(data interface{}) error {
+	//c.metrics["bytes-sent"].Adjust(int64(binary.Size(data)))
+	var buf bytes.Buffer
+	switch data := data.(type) {
+	case []uint8:
+		for _, d := range data {
+			if err := binary.Write(&buf, binary.BigEndian, &d); err != nil {
+				return err
+			}
+		}
+	case []int32:
+		for _, d := range data {
+			if err := binary.Write(&buf, binary.BigEndian, &d); err != nil {
+				return err
+			}
+		}
+	default:
+		return NewVNCError(fmt.Sprintf("Unable to send data; unrecognized data type %v", reflect.TypeOf(data)))
+	}
+	if err := binary.Write(c.c, binary.BigEndian, buf.Bytes()); err != nil {
+		return err
+	}
 	return nil
 }

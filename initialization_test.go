@@ -1,9 +1,6 @@
 package vnc
 
-import (
-	"encoding/binary"
-	"testing"
-)
+import "testing"
 
 func TestClientInit(t *testing.T) {
 	tests := []struct {
@@ -30,7 +27,7 @@ func TestClientInit(t *testing.T) {
 			t.Fatalf("clientInit() unexpected error %v", err)
 		}
 		var shared uint8
-		err = binary.Read(conn.c, binary.BigEndian, &shared)
+		err = conn.receive(&shared)
 		if shared != tt.shared {
 			t.Errorf("clientInit() shared: got = %v, want = %v", shared, tt.shared)
 		}
@@ -69,26 +66,26 @@ func TestServerInit(t *testing.T) {
 	for _, tt := range tests {
 		mockConn.Reset()
 		if tt.eof >= fbw {
-			if err := binary.Write(conn.c, binary.BigEndian, tt.fbWidth); err != nil {
+			if err := conn.send(tt.fbWidth); err != nil {
 				t.Fatal(err)
 			}
 		}
 		if tt.eof >= fbh {
-			if err := binary.Write(conn.c, binary.BigEndian, tt.fbHeight); err != nil {
+			if err := conn.send(tt.fbHeight); err != nil {
 				t.Fatal(err)
 			}
 		}
 		if tt.eof >= pf {
 			pfBytes, _ := tt.pixelFormat.Bytes()
-			if err := binary.Write(conn.c, binary.BigEndian, pfBytes); err != nil {
+			if err := conn.send(pfBytes); err != nil {
 				t.Fatal(err)
 			}
 		}
 		if tt.eof >= dn {
-			if err := binary.Write(conn.c, binary.BigEndian, uint32(len(tt.desktopName))); err != nil {
+			if err := conn.send(uint32(len(tt.desktopName))); err != nil {
 				t.Fatal(err)
 			}
-			if err := binary.Write(conn.c, binary.BigEndian, []byte(tt.desktopName)); err != nil {
+			if err := conn.send([]byte(tt.desktopName)); err != nil {
 				t.Fatal(err)
 			}
 		}

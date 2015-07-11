@@ -4,11 +4,7 @@ See http://tools.ietf.org/html/rfc6143#section-7.2 for more info.
 */
 package vnc
 
-import (
-	"crypto/des"
-	"encoding/binary"
-	"net"
-)
+import "crypto/des"
 
 const (
 	secTypeInvalid = iota
@@ -23,18 +19,18 @@ type ClientAuth interface {
 	SecurityType() uint8
 
 	// Handshake is called when the authentication handshake should be
-	// performed, as part of the general RFB handshake. (see 7.1.2)
-	Handshake(net.Conn) error
+	// performed, as part of the general RFB handshake. (see 7.2.1)
+	Handshake(*ClientConn) error
 }
 
-// ClientAuthNone is the "none" authentication. See 7.1.2
+// ClientAuthNone is the "none" authentication. See 7.2.1
 type ClientAuthNone struct{}
 
 func (*ClientAuthNone) SecurityType() uint8 {
 	return secTypeNone
 }
 
-func (*ClientAuthNone) Handshake(net.Conn) error {
+func (*ClientAuthNone) Handshake(conn *ClientConn) error {
 	return nil
 }
 
@@ -50,7 +46,7 @@ func (*ClientAuthVNC) SecurityType() uint8 {
 // 7.2.2. VNC Authentication uses a 16-byte challenge.
 const vncAuthChallengeSize = 16
 
-func (auth *ClientAuthVNC) Handshake(conn net.Conn) error {
+func (auth *ClientAuthVNC) Handshake(conn *ClientConn) error {
 
 	if auth.Password == "" {
 		return NewVNCError("securityHandshake: handshake failed; no password provided for VNCAuth.")
@@ -58,14 +54,14 @@ func (auth *ClientAuthVNC) Handshake(conn net.Conn) error {
 
 	// Read challenge block
 	var challenge [vncAuthChallengeSize]byte
-	if err := binary.Read(conn, binary.BigEndian, &challenge); err != nil {
+	if err := conn.receive(&challenge); err != nil {
 		return err
 	}
 
 	auth.encode(&challenge)
 
 	// Send the encrypted challenge back to server
-	if err := binary.Write(conn, binary.BigEndian, challenge); err != nil {
+	if err := conn.send(challenge); err != nil {
 		return err
 	}
 

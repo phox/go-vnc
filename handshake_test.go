@@ -65,7 +65,7 @@ func TestProtocolVersionHandshake(t *testing.T) {
 
 	for _, tt := range tests {
 		mockConn.Reset()
-		if err := binary.Write(conn.c, binary.BigEndian, []byte(tt.server)); err != nil {
+		if err := conn.send([]byte(tt.server)); err != nil {
 			t.Fatal(err)
 		}
 
@@ -82,7 +82,7 @@ func TestProtocolVersionHandshake(t *testing.T) {
 
 		// Validate client response.
 		var client [pvLen]byte
-		err = binary.Read(conn.c, binary.BigEndian, &client)
+		err = conn.receive(&client)
 		if err == nil && !tt.ok {
 			t.Fatalf("protocolVersionHandshake() unexpected error: %v", err)
 		}
@@ -136,14 +136,14 @@ func TestSecurityHandshake33(t *testing.T) {
 
 	for _, tt := range tests {
 		mockConn.Reset()
-		if err := binary.Write(conn.c, binary.BigEndian, tt.server); err != nil {
+		if err := conn.send(tt.server); err != nil {
 			t.Fatal(err)
 		}
 		if len(tt.reason) > 0 {
-			if err := binary.Write(conn.c, binary.BigEndian, uint32(len(tt.reason))); err != nil {
+			if err := conn.send(uint32(len(tt.reason))); err != nil {
 				t.Fatal(err)
 			}
-			if err := binary.Write(conn.c, binary.BigEndian, []byte(tt.reason)); err != nil {
+			if err := conn.send([]byte(tt.reason)); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -211,17 +211,17 @@ func TestSecurityHandshake38(t *testing.T) {
 
 	for _, tt := range tests {
 		mockConn.Reset()
-		if err := binary.Write(conn.c, binary.BigEndian, uint8(len(tt.server))); err != nil {
+		if err := conn.send(uint8(len(tt.server))); err != nil {
 			t.Fatal(err)
 		}
-		if err := binary.Write(conn.c, binary.BigEndian, []byte(tt.server)); err != nil {
+		if err := conn.send([]byte(tt.server)); err != nil {
 			t.Fatal(err)
 		}
 		if len(tt.reason) > 0 {
-			if err := binary.Write(conn.c, binary.BigEndian, uint32(len(tt.reason))); err != nil {
+			if err := conn.send(uint32(len(tt.reason))); err != nil {
 				t.Fatal(err)
 			}
-			if err := binary.Write(conn.c, binary.BigEndian, []byte(tt.reason)); err != nil {
+			if err := conn.send([]byte(tt.reason)); err != nil {
 				t.Fatal(err)
 			}
 		}
@@ -248,7 +248,7 @@ func TestSecurityHandshake38(t *testing.T) {
 
 		// Validate client response.
 		var secType uint8
-		err = binary.Read(conn.c, binary.BigEndian, &secType)
+		err = conn.receive(&secType)
 		if secType != tt.secType {
 			t.Errorf("securityHandshake() secType: got = %v, want = %v", secType, tt.secType)
 		}
@@ -278,13 +278,13 @@ func TestSecurityResultHandshake(t *testing.T) {
 
 	for _, tt := range tests {
 		mockConn.Reset()
-		if err := binary.Write(conn.c, binary.BigEndian, tt.result); err != nil {
+		if err := conn.send(tt.result); err != nil {
 			t.Fatal(err)
 		}
-		if err := binary.Write(conn.c, binary.BigEndian, uint32(len(tt.reason))); err != nil {
+		if err := conn.send(uint32(len(tt.reason))); err != nil {
 			t.Fatal(err)
 		}
-		if err := binary.Write(conn.c, binary.BigEndian, []byte(tt.reason)); err != nil {
+		if err := conn.send([]byte(tt.reason)); err != nil {
 			t.Fatal(err)
 		}
 
