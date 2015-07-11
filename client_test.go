@@ -107,7 +107,7 @@ func TestFramebufferUpdateRequest(t *testing.T) {
 		// Validate the request.
 		req := FramebufferUpdateRequestMessage{}
 		if err := conn.receive(&req); err != nil {
-			t.Errorf(err)
+			t.Error(err)
 			continue
 		}
 		if req.Msg != framebufferUpdateRequestMsg {
