@@ -54,12 +54,14 @@ func TestSetPixelFormat(t *testing.T) {
 			continue
 		}
 
-		// Read the request.
+		// Read back in.
 		req := SetPixelFormatMessage{}
 		if err := conn.receive(&req); err != nil {
 			t.Error(err)
 			continue
 		}
+
+		// Validate the request.
 		if got, want := req.Msg, setPixelFormatMsg; got != want {
 			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
 		}
@@ -95,42 +97,32 @@ func TestSetEncodings(t *testing.T) {
 			continue
 		}
 
-		// Read the request.
+		// Read back in.
 		req := SetEncodingsMessage{}
-		if err := conn.receive(&req.Msg); err != nil {
-			t.Error(err)
-			continue
-		}
-		for i := range req.Pad {
-			if err := conn.receive(&req.Pad[i]); err != nil {
-				t.Error(err)
-				continue
-			}
-		}
-		if err := conn.receive(&req.NumEncs); err != nil {
+		if err := conn.receive(&req); err != nil {
 			t.Error(err)
 			continue
 		}
 		var encs []int32 // Can't use the request struct.
-		for i := 0; i < len(tt.encs); i++ {
-			var enc int32
-			if err := conn.receive(&enc); err != nil {
-				t.Error(err)
-				continue
-			}
-			encs = append(encs, enc)
+		if err := conn.receiveN(&encs, int(req.NumEncs)); err != nil {
+			t.Error(err)
+			continue
 		}
 
 		// Validate the request.
-		if req.Msg != setEncodingsMsg {
-			t.Errorf("incorrect message-type; got = %v, want = %v", req.Msg, setEncodingsMsg)
+		if got, want := req.Msg, setEncodingsMsg; got != want {
+			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
 		}
-		if req.NumEncs != uint16(len(tt.encs)) {
-			t.Errorf("incorrect number-of-encodings; got = %v, want = %v", req.NumEncs, len(tt.encs))
+		if got, want := req.NumEncs, uint16(len(tt.encs)); got != want {
+			t.Errorf("incorrect number-of-encodings; got = %v, want = %v", got, want)
+		}
+		if got, want := len(encs), len(tt.encs); got != want {
+			t.Errorf("lengths of encodings don't match; got = %v, want = %v", got, want)
+			continue
 		}
 		for i := 0; i < len(tt.encs); i++ {
-			if encs[i] != tt.encs[i].Type() {
-				t.Errorf("incorrect encoding-type [%v]; got = %v, want = %v", i, req.Encs[i], tt.encs[i].Type())
+			if got, want := encs[i], tt.encs[i].Type(); got != want {
+				t.Errorf("incorrect encoding-type [%v]; got = %v, want = %v", i, got, want)
 			}
 		}
 	}
@@ -161,12 +153,14 @@ func TestFramebufferUpdateRequest(t *testing.T) {
 			continue
 		}
 
-		// Validate the request.
+		// Read back in.
 		req := FramebufferUpdateRequestMessage{}
 		if err := conn.receive(&req); err != nil {
 			t.Error(err)
 			continue
 		}
+
+		// Validate the request.
 		if req.Msg != framebufferUpdateRequestMsg {
 			t.Errorf("incorrect message-type; got = %v, want = %v", req.Msg, framebufferUpdateRequestMsg)
 		}
@@ -235,11 +229,16 @@ func TestKeyEvent(t *testing.T) {
 			continue
 		}
 
-		// Validate the request.
-		req := KeyEventMessage{}
+		// Read back in.
+		var req KeyEventMessage
 		if err := conn.receive(&req); err != nil {
 			t.Error(err)
 			continue
+		}
+
+		// Validate the request.
+		if got, want := req.Msg, keyEventMsg; got != want {
+			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
 		}
 		var down bool
 		switch req.DownFlag {
@@ -247,10 +246,6 @@ func TestKeyEvent(t *testing.T) {
 			down = PressKey
 		case RFBFalse:
 			down = ReleaseKey
-		}
-
-		if got, want := req.Msg, keyEventMsg; got != want {
-			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
 		}
 		if got, want := down, tt.down; got != want {
 			t.Errorf("incorrect down-flag; got = %v, want = %v", got, want)
@@ -312,12 +307,14 @@ func TestPointerEvent(t *testing.T) {
 			continue
 		}
 
-		// Validate the request.
+		// Read back in.
 		req := PointerEventMessage{}
 		if err := conn.receive(&req); err != nil {
 			t.Error(err)
 			continue
 		}
+
+		// Validate the request.
 		if got, want := req.Msg, pointerEventMsg; got != want {
 			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
 		}
@@ -369,22 +366,24 @@ func TestClientCutText(t *testing.T) {
 			continue
 		}
 
-		// Validate the request.
+		// Read back in.
 		req := ClientCutTextMessage{}
 		if err := conn.receive(&req); err != nil {
 			t.Error(err)
 			continue
 		}
+		var text []byte
+		if err := conn.receiveN(&text, int(req.Length)); err != nil {
+			t.Error(err)
+			continue
+		}
+
+		// Validate the request.
 		if got, want := req.Msg, clientCutTextMsg; got != want {
 			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
 		}
 		if got, want := req.Length, uint32(len(tt.sent)); got != want {
 			t.Errorf("incorrect length; got = %v, want = %v", got, want)
-		}
-		var text []byte
-		if err := conn.receiveN(&text, int(req.Length)); err != nil {
-			t.Error(err)
-			continue
 		}
 		if got, want := text, tt.sent; !operators.EqualSlicesOfByte(got, want) {
 			t.Errorf("incorrect text; got = %v, want = %v", got, want)

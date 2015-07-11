@@ -48,12 +48,11 @@ func (c *ClientConn) SetPixelFormat(pf PixelFormat) error {
 	return nil
 }
 
-// SetEncodingsMessage holds the wire format message.
+// SetEncodingsMessage holds the wire format message, sans encoding-type field.
 type SetEncodingsMessage struct {
 	Msg     uint8   // message-type
-	Pad     [1]byte // padding
+	_       [1]byte // padding
 	NumEncs uint16  // number-of-encodings
-	Encs    []int32 // encoding-type
 }
 
 // SetEncodings sets the encoding types in which the pixel data can be sent
@@ -67,29 +66,21 @@ func (c *ClientConn) SetEncodings(e []Encoding) error {
 		Msg:     setEncodingsMsg,
 		NumEncs: uint16(len(e)),
 	}
+	var encs []int32 // encoding-type
+
 	for _, v := range e {
-		msg.Encs = append(msg.Encs, int32(v.Type()))
+		encs = append(encs, int32(v.Type()))
 	}
 
 	// Send message.
-	if err := c.send(&msg.Msg); err != nil {
+	if err := c.send(msg); err != nil {
 		return err
 	}
-	for i := range msg.Pad {
-		if err := c.send(&msg.Pad[i]); err != nil {
-			return err
-		}
-	}
-	if err := c.send(&msg.NumEncs); err != nil {
+	if err := c.sendN(encs); err != nil {
 		return err
 	}
-	for i := range msg.Encs {
-		if err := c.send(&msg.Encs[i]); err != nil {
-			return err
-		}
-	}
-	c.encodings = e
 
+	c.encodings = e
 	return nil
 }
 
@@ -208,8 +199,8 @@ func (c *ClientConn) ClientCutText(text string) error {
 	}
 
 	// Strip carriage-return (0x0d) chars.
-	// From RFC: "Ends of lines are represented by the newline character (hex 0a)
-	// alone. No carriage-return (hex 0d) is used."
+	// From RFC: "Ends of lines are represented by the newline character (0x0a)
+	// alone. No carriage-return (0x0d) is used."
 	text = strings.Join(strings.Split(text, "\r"), "")
 
 	msg := ClientCutTextMessage{

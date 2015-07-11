@@ -11,6 +11,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"net"
+	"reflect"
 
 	"golang.org/x/net/context"
 )
@@ -196,14 +197,31 @@ func (c *ClientConn) receive(pkt interface{}) error {
 }
 
 // receiveN receives N bytes from the network.
-func (c *ClientConn) receiveN(bytes *[]byte, n int) error {
-	var b byte
-	for i := 0; i < n; i++ {
-		if err := binary.Read(c.c, binary.BigEndian, &b); err != nil {
-			return err
+func (c *ClientConn) receiveN(data interface{}, n int) error {
+	switch data.(type) {
+	case *[]uint8:
+		var v uint8
+		for i := 0; i < n; i++ {
+			if err := binary.Read(c.c, binary.BigEndian, &v); err != nil {
+				return err
+			}
+			slice := data.(*[]uint8)
+			*slice = append(*slice, v)
 		}
-		*bytes = append(*bytes, b)
+	case *[]int32:
+		var v int32
+		for i := 0; i < n; i++ {
+			if err := binary.Read(c.c, binary.BigEndian, &v); err != nil {
+				return err
+			}
+			slice := data.(*[]int32)
+			*slice = append(*slice, v)
+		}
+
+	default:
+		return NewVNCError(fmt.Sprintf("Unable to receive data; unrecognized data type %v", reflect.TypeOf(data)))
 	}
+
 	return nil
 }
 
@@ -213,12 +231,23 @@ func (c *ClientConn) send(pkt interface{}) error {
 }
 
 // sendN sends N bytes to the network.
-func (c *ClientConn) sendN(bytez []byte) error {
+func (c *ClientConn) sendN(data interface{}) error {
 	var buf bytes.Buffer
-	for _, b := range bytez {
-		if err := binary.Write(&buf, binary.BigEndian, &b); err != nil {
-			return err
+	switch data := data.(type) {
+	case []uint8:
+		for _, d := range data {
+			if err := binary.Write(&buf, binary.BigEndian, &d); err != nil {
+				return err
+			}
 		}
+	case []int32:
+		for _, d := range data {
+			if err := binary.Write(&buf, binary.BigEndian, &d); err != nil {
+				return err
+			}
+		}
+	default:
+		return NewVNCError(fmt.Sprintf("Unable to send data; unrecognized data type %v", reflect.TypeOf(data)))
 	}
 	if err := binary.Write(c.c, binary.BigEndian, buf.Bytes()); err != nil {
 		return err
