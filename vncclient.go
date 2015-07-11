@@ -13,6 +13,7 @@ import (
 	"net"
 	"reflect"
 
+	"github.com/kward/go-vnc/go/metrics"
 	"golang.org/x/net/context"
 )
 
@@ -21,6 +22,10 @@ func Connect(ctx context.Context, c net.Conn, cfg *ClientConfig) (*ClientConn, e
 	conn := &ClientConn{
 		c:      c,
 		config: cfg,
+		metrics: map[string]metrics.Metric{
+			"bytes-received": &metrics.Gauge{},
+			"bytes-sent":     &metrics.Gauge{},
+		},
 	}
 
 	if err := conn.protocolVersionHandshake(); err != nil {
@@ -120,6 +125,9 @@ type ClientConn struct {
 	// be modified. If you wish to set a new pixel format, use the
 	// SetPixelFormat method.
 	pixelFormat PixelFormat
+
+	// Track metrics on system performance.
+	metrics map[string]metrics.Metric
 }
 
 // Close a connection to a VNC server.
@@ -192,8 +200,12 @@ func (c *ClientConn) ListenAndHandle() error {
 }
 
 // receive a packet from the network.
-func (c *ClientConn) receive(pkt interface{}) error {
-	return binary.Read(c.c, binary.BigEndian, pkt)
+func (c *ClientConn) receive(data interface{}) error {
+	if err := binary.Read(c.c, binary.BigEndian, data); err != nil {
+		return err
+	}
+	//c.metrics["bytes-received"].Adjust(int64(binary.Size(data)))
+	return nil
 }
 
 // receiveN receives N bytes from the network.
@@ -217,21 +229,22 @@ func (c *ClientConn) receiveN(data interface{}, n int) error {
 			slice := data.(*[]int32)
 			*slice = append(*slice, v)
 		}
-
 	default:
 		return NewVNCError(fmt.Sprintf("Unable to receive data; unrecognized data type %v", reflect.TypeOf(data)))
 	}
-
+	//c.metrics["bytes-received"].Adjust(int64(binary.Size(data)))
 	return nil
 }
 
 // send a packet to the network.
-func (c *ClientConn) send(pkt interface{}) error {
-	return binary.Write(c.c, binary.BigEndian, pkt)
+func (c *ClientConn) send(data interface{}) error {
+	//c.metrics["bytes-sent"].Adjust(int64(binary.Size(data)))
+	return binary.Write(c.c, binary.BigEndian, data)
 }
 
 // sendN sends N bytes to the network.
 func (c *ClientConn) sendN(data interface{}) error {
+	//c.metrics["bytes-sent"].Adjust(int64(binary.Size(data)))
 	var buf bytes.Buffer
 	switch data := data.(type) {
 	case []uint8:
