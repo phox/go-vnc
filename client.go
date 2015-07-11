@@ -20,6 +20,7 @@ const (
 	clientCutTextMsg
 )
 
+// SetPixelFormatMessage holds the wire format message.
 type SetPixelFormatMessage struct {
 	Msg uint8       // message-type
 	_   [3]byte     // padding
