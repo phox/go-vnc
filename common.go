@@ -25,7 +25,7 @@ func (e VNCError) Error() string {
 	return e.s
 }
 
-var settleDuration = 10 * time.Millisecond
+var settleDuration = 25 * time.Millisecond
 
 // Settle returns the UI settle duration.
 func Settle() time.Duration {
