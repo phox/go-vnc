@@ -22,22 +22,27 @@ func Connect(ctx context.Context, c net.Conn, cfg *ClientConfig) (*ClientConn, e
 	}
 
 	if err := conn.protocolVersionHandshake(); err != nil {
+		log.Println("protocolVersionHandshake()")
 		conn.Close()
 		return nil, err
 	}
 	if err := conn.securityHandshake(); err != nil {
+		log.Println("securityHandshake()")
 		conn.Close()
 		return nil, err
 	}
 	if err := conn.securityResultHandshake(); err != nil {
+		log.Println("securityResultHandshake()")
 		conn.Close()
 		return nil, err
 	}
 	if err := conn.clientInit(); err != nil {
+		log.Println("clientInit()")
 		conn.Close()
 		return nil, err
 	}
 	if err := conn.serverInit(); err != nil {
+		log.Println("serverInit()")
 		conn.Close()
 		return nil, err
 	}
