@@ -19,11 +19,11 @@ type ClientAuth interface {
 	SecurityType() uint8
 
 	// Handshake is called when the authentication handshake should be
-	// performed, as part of the general RFB handshake. (see 7.1.2)
+	// performed, as part of the general RFB handshake. (see 7.2.1)
 	Handshake(*ClientConn) error
 }
 
-// ClientAuthNone is the "none" authentication. See 7.1.2
+// ClientAuthNone is the "none" authentication. See 7.2.1
 type ClientAuthNone struct{}
 
 func (*ClientAuthNone) SecurityType() uint8 {
