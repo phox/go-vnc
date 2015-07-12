@@ -100,7 +100,7 @@ func ExampleConnect() {
 	for {
 		msg := <-vcc.ServerMessageCh
 		switch msg.Type() {
-		case FramebufferUpdate:
+		case FramebufferUpdateMsg:
 			log.Println("Received FramebufferUpdate message.")
 		default:
 			log.Printf("Received message type:%v msg:%v\n", msg.Type(), msg)
