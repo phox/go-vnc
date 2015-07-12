@@ -5,6 +5,7 @@ package vnc
 import (
 	"encoding/binary"
 	"io"
+	"log"
 )
 
 const (
@@ -46,6 +47,9 @@ func (*RawEncoding) Type() int32 {
 }
 
 func (*RawEncoding) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
+	if c.debug {
+		log.Printf("RawEncoding.Read(): %v", rect)
+	}
 	bytesPerPixel := c.pixelFormat.BPP / 8
 	pixelBytes := make([]uint8, bytesPerPixel)
 
