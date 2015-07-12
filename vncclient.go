@@ -135,7 +135,7 @@ type ClientConn struct {
 
 // Close a connection to a VNC server.
 func (c *ClientConn) Close() error {
-	fmt.Println("VNC Client connection closed.")
+	log.Print("VNC Client connection closed.")
 	return c.c.Close()
 }
 
@@ -204,25 +204,28 @@ func (c *ClientConn) ListenAndHandle() error {
 	for {
 		var messageType uint8
 		if err := c.receive(&messageType); err != nil {
-			fmt.Println("error: reading from server")
+			log.Print("error: reading from server")
 			break
 		}
 
 		msg, ok := serverMessages[messageType]
 		if !ok {
 			// Unsupported message type! Bad!
-			fmt.Printf("error: unsupported message type")
+			log.Printf("error unsupported message-type: %v", messageType)
 			break
 		}
+		if c.debug {
+			log.Printf("message-type: %v", messageType)
+		}
 
-		parsedMsg, err := msg.Read(c, c.c)
+		parsedMsg, err := msg.Read(c)
 		if err != nil {
-			fmt.Println("error: parsing message")
+			log.Printf("error parsing message; %v", err)
 			break
 		}
 
 		if c.config.ServerMessageCh == nil {
-			fmt.Println("ignoring message; no server message channel")
+			log.Print("ignoring message; no server message channel")
 			continue
 		}
 
@@ -237,7 +240,7 @@ func (c *ClientConn) receive(data interface{}) error {
 	if err := binary.Read(c.c, binary.BigEndian, data); err != nil {
 		return err
 	}
-	//c.metrics["bytes-received"].Adjust(int64(binary.Size(data)))
+	//metrics.Adjust("bytes-received", int64(binary.Size(data)))
 	return nil
 }
 

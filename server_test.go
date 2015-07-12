@@ -2,6 +2,7 @@ package vnc
 
 import "testing"
 
+// TODO(kward): need to read encodings in addition to rectangles.
 func TestFramebufferUpdate(t *testing.T) {
 	tests := []struct {
 		rects []RectangleMessage
@@ -27,9 +28,11 @@ func TestFramebufferUpdate(t *testing.T) {
 			t.Error(err)
 			continue
 		}
-		if err := conn.send(tt.rects); err != nil {
-			t.Error(err)
-			continue
+		for _, rect := range tt.rects {
+			if err := conn.send(rect); err != nil {
+				t.Error(err)
+				continue
+			}
 		}
 
 		// Validate message handling.
@@ -39,7 +42,7 @@ func TestFramebufferUpdate(t *testing.T) {
 			continue
 		}
 		fu := &FramebufferUpdate{}
-		parsedFU, err := fu.Read(conn, conn.c)
+		parsedFU, err := fu.Read(conn)
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 			continue

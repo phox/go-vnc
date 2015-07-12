@@ -3,9 +3,7 @@
 package vnc
 
 import (
-	"encoding/binary"
 	"fmt"
-	"io"
 	"log"
 )
 
@@ -24,7 +22,7 @@ type ServerMessage interface {
 	// Read reads the contents of the message from the reader. At the point
 	// this is called, the message type has already been read from the reader.
 	// This should return a new ServerMessage that is the appropriate type.
-	Read(*ClientConn, io.Reader) (ServerMessage, error)
+	Read(*ClientConn) (ServerMessage, error)
 }
 
 // RectangleMessage holds the wire format message.
@@ -68,10 +66,10 @@ func (m *FramebufferUpdate) Type() uint8 {
 	return m.Msg
 }
 
-func (m *FramebufferUpdate) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
-	// if c.debug {
-	// 	log.Print("FramebufferUpdate.Read()")
-	// }
+func (m *FramebufferUpdate) Read(c *ClientConn) (ServerMessage, error) {
+	if c.debug {
+		log.Print("FramebufferUpdate.Read()")
+	}
 
 	// Build the map of encodings supported
 	encMap := make(map[int32]Encoding)
@@ -89,17 +87,21 @@ func (m *FramebufferUpdate) Read(c *ClientConn, r io.Reader) (ServerMessage, err
 	if err := c.receive(&numRects); err != nil {
 		return nil, err
 	}
-	var rectMsgs []RectangleMessage
-	if err := c.receiveN(&rectMsgs, int(numRects)); err != nil {
-		return nil, err
+	if c.debug {
+		log.Printf("numRects:%v", numRects)
 	}
 
 	// Extract rectangles.
 	rects := make([]Rectangle, numRects)
-	for i, msg := range rectMsgs {
+	for i := 0; i < int(numRects); i++ {
+		var msg RectangleMessage
+		if err := c.receive(&msg); err != nil {
+			return nil, err
+		}
+
 		enc, ok := encMap[msg.Encoding]
 		if !ok {
-			return nil, fmt.Errorf("unsupported encoding type: %d", msg.Encoding)
+			return nil, fmt.Errorf("unsupported encoding type: %v; %v", msg.Encoding, msg)
 		}
 
 		rect := &rects[i]
@@ -107,7 +109,12 @@ func (m *FramebufferUpdate) Read(c *ClientConn, r io.Reader) (ServerMessage, err
 		rect.Y = msg.Y
 		rect.Width = msg.Width
 		rect.Height = msg.Height
-		rect.Enc = enc
+
+		var err error
+		rect.Enc, err = enc.Read(c, rect)
+		if err != nil {
+			return nil, fmt.Errorf("error reading encoding: %v", err)
+		}
 	}
 
 	return NewFramebufferUpdate(rects), nil
@@ -134,24 +141,24 @@ func (*SetColorMapEntries) Type() uint8 {
 	return SetColorMapEntriesMsg
 }
 
-func (*SetColorMapEntries) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
+func (*SetColorMapEntries) Read(c *ClientConn) (ServerMessage, error) {
 	if c.debug {
 		log.Print("SetColorMapEntries.Read()")
 	}
 
 	// Read off the padding
 	var padding [1]byte
-	if _, err := io.ReadFull(r, padding[:]); err != nil {
+	if err := c.receive(&padding); err != nil {
 		return nil, err
 	}
 
 	var result SetColorMapEntries
-	if err := binary.Read(r, binary.BigEndian, &result.FirstColor); err != nil {
+	if err := c.receive(&result.FirstColor); err != nil {
 		return nil, err
 	}
 
 	var numColors uint16
-	if err := binary.Read(r, binary.BigEndian, &numColors); err != nil {
+	if err := c.receive(&numColors); err != nil {
 		return nil, err
 	}
 
@@ -159,16 +166,8 @@ func (*SetColorMapEntries) Read(c *ClientConn, r io.Reader) (ServerMessage, erro
 	for i := uint16(0); i < numColors; i++ {
 
 		color := &result.Colors[i]
-		data := []interface{}{
-			&color.R,
-			&color.G,
-			&color.B,
-		}
-
-		for _, val := range data {
-			if err := binary.Read(r, binary.BigEndian, val); err != nil {
-				return nil, err
-			}
+		if err := c.receive(&color); err != nil {
+			return nil, err
 		}
 
 		// Update the connection's color map
@@ -187,7 +186,7 @@ func (*Bell) Type() uint8 {
 	return BellMsg
 }
 
-func (*Bell) Read(c *ClientConn, _ io.Reader) (ServerMessage, error) {
+func (*Bell) Read(c *ClientConn) (ServerMessage, error) {
 	if c.debug {
 		log.Print("Bell.Read()")
 	}
@@ -206,24 +205,24 @@ func (*ServerCutText) Type() uint8 {
 	return ServerCutTextMsg
 }
 
-func (*ServerCutText) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
+func (*ServerCutText) Read(c *ClientConn) (ServerMessage, error) {
 	if c.debug {
 		log.Print("ServerCutText.Read()")
 	}
 
 	// Read off the padding
 	var padding [1]byte
-	if _, err := io.ReadFull(r, padding[:]); err != nil {
+	if err := c.receive(&padding); err != nil {
 		return nil, err
 	}
 
 	var textLength uint32
-	if err := binary.Read(r, binary.BigEndian, &textLength); err != nil {
+	if err := c.receive(&textLength); err != nil {
 		return nil, err
 	}
 
 	textBytes := make([]uint8, textLength)
-	if err := binary.Read(r, binary.BigEndian, &textBytes); err != nil {
+	if err := c.receive(&textBytes); err != nil {
 		return nil, err
 	}
 

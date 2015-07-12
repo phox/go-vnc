@@ -4,7 +4,6 @@ package vnc
 
 import (
 	"encoding/binary"
-	"io"
 	"log"
 )
 
@@ -28,7 +27,7 @@ type Encoding interface {
 	// Read the contents of the encoded pixel data from the reader.
 	// This should return a new Encoding implementation that contains
 	// the proper data.
-	Read(*ClientConn, *Rectangle, io.Reader) (Encoding, error)
+	Read(*ClientConn, *Rectangle) (Encoding, error)
 }
 
 // RawEncoding is raw pixel data sent by the server.
@@ -46,7 +45,7 @@ func (*RawEncoding) Type() int32 {
 	return Raw
 }
 
-func (*RawEncoding) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding, error) {
+func (*RawEncoding) Read(c *ClientConn, rect *Rectangle) (Encoding, error) {
 	if c.debug {
 		log.Printf("RawEncoding.Read(): %v", rect)
 	}
@@ -61,7 +60,8 @@ func (*RawEncoding) Read(c *ClientConn, rect *Rectangle, r io.Reader) (Encoding,
 	colors := make([]Color, int(rect.Height)*int(rect.Width))
 	for y := uint16(0); y < rect.Height; y++ {
 		for x := uint16(0); x < rect.Width; x++ {
-			if _, err := io.ReadFull(r, pixelBytes); err != nil {
+			//if _, err := io.ReadFull(r, pixelBytes); err != nil {
+			if err := c.receive(pixelBytes); err != nil {
 				return nil, err
 			}
 
@@ -96,7 +96,7 @@ func (*DesktopSizePseudoEncoding) Type() int32 {
 	return DesktopSizePseudo
 }
 
-func (*DesktopSizePseudoEncoding) Read(c *ClientConn, rect *Rectangle, _ io.Reader) (Encoding, error) {
+func (*DesktopSizePseudoEncoding) Read(c *ClientConn, rect *Rectangle) (Encoding, error) {
 	c.fbWidth = rect.Width
 	c.fbHeight = rect.Height
 
