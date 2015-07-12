@@ -4,7 +4,10 @@ See http://tools.ietf.org/html/rfc6143#section-7.2 for more info.
 */
 package vnc
 
-import "crypto/des"
+import (
+	"crypto/des"
+	"log"
+)
 
 const (
 	secTypeInvalid = iota
@@ -31,6 +34,10 @@ func (*ClientAuthNone) SecurityType() uint8 {
 }
 
 func (*ClientAuthNone) Handshake(conn *ClientConn) error {
+	if conn.debug {
+		log.Print("ClientAuthNone.Handshake()")
+	}
+
 	return nil
 }
 
@@ -47,6 +54,9 @@ func (*ClientAuthVNC) SecurityType() uint8 {
 const vncAuthChallengeSize = 16
 
 func (auth *ClientAuthVNC) Handshake(conn *ClientConn) error {
+	if conn.debug {
+		log.Print("ClientAuthVNC.Handshake()")
+	}
 
 	if auth.Password == "" {
 		return NewVNCError("securityHandshake: handshake failed; no password provided for VNCAuth.")

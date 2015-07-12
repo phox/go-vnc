@@ -8,6 +8,7 @@ import (
 	"encoding/binary"
 	"fmt"
 	"io"
+	"log"
 )
 
 const (
@@ -54,6 +55,10 @@ func (m *FramebufferUpdateMessage) Type() uint8 {
 }
 
 func (m *FramebufferUpdateMessage) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
+	// if c.debug {
+	// 	log.Print("FramebufferUpdateMessage.Read()")
+	// }
+
 	// Read off the padding
 	if _, err := io.ReadFull(r, m.Pad[:]); err != nil {
 		return nil, err
@@ -127,6 +132,10 @@ func (*SetColorMapEntriesMessage) Type() uint8 {
 }
 
 func (*SetColorMapEntriesMessage) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
+	if c.debug {
+		log.Print("SetColorMapEntriesMessage.Read()")
+	}
+
 	// Read off the padding
 	var padding [1]byte
 	if _, err := io.ReadFull(r, padding[:]); err != nil {
@@ -175,7 +184,11 @@ func (*BellMessage) Type() uint8 {
 	return Bell
 }
 
-func (*BellMessage) Read(*ClientConn, io.Reader) (ServerMessage, error) {
+func (*BellMessage) Read(c *ClientConn, _ io.Reader) (ServerMessage, error) {
+	if c.debug {
+		log.Print("BellMessage.Read()")
+	}
+
 	return new(BellMessage), nil
 }
 
@@ -191,6 +204,10 @@ func (*ServerCutTextMessage) Type() uint8 {
 }
 
 func (*ServerCutTextMessage) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
+	if c.debug {
+		log.Print("ServerCutTextMessage.Read()")
+	}
+
 	// Read off the padding
 	var padding [1]byte
 	if _, err := io.ReadFull(r, padding[:]); err != nil {

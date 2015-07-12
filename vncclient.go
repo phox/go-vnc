@@ -28,29 +28,27 @@ func Connect(ctx context.Context, c net.Conn, cfg *ClientConfig) (*ClientConn, e
 			"bytes-sent":     &metrics.Gauge{},
 		},
 	}
+	if debug := ctx.Value("debug"); debug != nil {
+		conn.SetDebug(debug.(bool))
+	}
 
 	if err := conn.protocolVersionHandshake(); err != nil {
-		log.Println("protocolVersionHandshake()")
 		conn.Close()
 		return nil, err
 	}
 	if err := conn.securityHandshake(); err != nil {
-		log.Println("securityHandshake()")
 		conn.Close()
 		return nil, err
 	}
 	if err := conn.securityResultHandshake(); err != nil {
-		log.Println("securityResultHandshake()")
 		conn.Close()
 		return nil, err
 	}
 	if err := conn.clientInit(); err != nil {
-		log.Println("clientInit()")
 		conn.Close()
 		return nil, err
 	}
 	if err := conn.serverInit(); err != nil {
-		log.Println("serverInit()")
 		conn.Close()
 		return nil, err
 	}
@@ -134,6 +132,9 @@ type ClientConn struct {
 
 	// Track metrics on system performance.
 	metrics map[string]metrics.Metric
+
+	// Flag to determine whether debug output should be provided.
+	debug bool
 }
 
 // Close a connection to a VNC server.
@@ -147,6 +148,14 @@ func (c *ClientConn) DesktopName() string {
 	return c.desktopName
 }
 
+// setDesktopName stores the server provided desktop name.
+func (c *ClientConn) setDesktopName(name string) {
+	if c.debug {
+		log.Printf("desktopName: %v", name)
+	}
+	c.desktopName = name
+}
+
 // Encodings returns the server provided encodings.
 func (c *ClientConn) Encodings() []Encoding {
 	return c.encodings
@@ -157,9 +166,31 @@ func (c *ClientConn) FramebufferHeight() uint16 {
 	return c.fbHeight
 }
 
+// setFramebufferHeight stores the server provided framebuffer height.
+func (c *ClientConn) setFramebufferHeight(height uint16) {
+	if c.debug {
+		log.Printf("framebufferHeight: %v", height)
+	}
+	c.fbHeight = height
+}
+
 // FramebufferWidth returns the server provided framebuffer width.
 func (c *ClientConn) FramebufferWidth() uint16 {
 	return c.fbWidth
+}
+
+// setFramebufferWidth stores the server provided framebuffer width.
+func (c *ClientConn) setFramebufferWidth(width uint16) {
+	if c.debug {
+		log.Printf("framebufferWidth: %v", width)
+	}
+	c.fbWidth = width
+}
+
+// SetDebugging [dis-]enables debugging.
+func (c *ClientConn) SetDebug(debug bool) {
+	log.Printf("debug: %v", debug)
+	c.debug = debug
 }
 
 // ListenAndHandle listens to a VNC server and handles server messages.

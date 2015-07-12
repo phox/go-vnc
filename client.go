@@ -6,6 +6,7 @@ package vnc
 
 import (
 	"fmt"
+	"log"
 	"strings"
 	"unicode"
 )
@@ -125,6 +126,10 @@ const (
 //
 // See RFC 6143 Section 7.5.4.
 func (c *ClientConn) KeyEvent(keysym uint32, down bool) error {
+	if c.debug {
+		log.Printf("KeyEvent(0x%04x, %v)", keysym, down)
+	}
+
 	var downFlag uint8 = RFBFalse
 	if down {
 		downFlag = RFBTrue
@@ -170,6 +175,10 @@ type PointerEventMessage struct {
 //
 // See RFC 6143 Section 7.5.5
 func (c *ClientConn) PointerEvent(mask ButtonMask, x, y uint16) error {
+	if c.debug {
+		log.Printf("PointerEvent(%08b, %v, %v)", mask, x, y)
+	}
+
 	msg := PointerEventMessage{pointerEventMsg, uint8(mask), x, y}
 	if err := c.send(msg); err != nil {
 		return err
@@ -193,6 +202,10 @@ type ClientCutTextMessage struct {
 //
 // See RFC 6143 Section 7.5.6
 func (c *ClientConn) ClientCutText(text string) error {
+	if c.debug {
+		log.Printf("ClientCutText(%v)", text)
+	}
+
 	for _, char := range text {
 		if char > unicode.MaxLatin1 {
 			return NewVNCError(fmt.Sprintf("Character '%s' is not valid Latin-1", char))

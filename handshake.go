@@ -4,7 +4,10 @@ See http://tools.ietf.org/html/rfc6143#section-7.1 for more info.
 */
 package vnc
 
-import "fmt"
+import (
+	"fmt"
+	"log"
+)
 
 const pvLen = 12 // ProtocolVersion message length.
 
@@ -35,11 +38,18 @@ const (
 
 // protocolVersionHandshake implements §7.1.1 ProtocolVersion Handshake.
 func (c *ClientConn) protocolVersionHandshake() error {
+	if c.debug {
+		log.Print("protocolVersionHandshake()")
+	}
+
 	var protocolVersion [pvLen]byte
 
 	// Read the ProtocolVersion message sent by the server.
 	if err := c.receive(&protocolVersion); err != nil {
 		return err
+	}
+	if c.debug {
+		log.Printf("protocolVersion: %v", string(protocolVersion[:]))
 	}
 
 	major, minor, err := parseProtocolVersion(protocolVersion[:])
@@ -60,6 +70,9 @@ func (c *ClientConn) protocolVersionHandshake() error {
 	c.protocolVersion = pv
 
 	// Respond with the version we will support
+	if c.debug {
+		log.Printf("supported protocolVersion: %v", pv)
+	}
 	if err = c.send([]byte(pv)); err != nil {
 		return err
 	}
@@ -69,16 +82,17 @@ func (c *ClientConn) protocolVersionHandshake() error {
 
 // securityHandshake implements §7.1.2 Security Handshake.
 func (c *ClientConn) securityHandshake() error {
+	if c.debug {
+		log.Print("securityHandshake()")
+	}
 
 	switch c.protocolVersion {
 	case PROTO_VERS_3_3:
-		err := c.securityHandshake33()
-		if err != nil {
+		if err := c.securityHandshake33(); err != nil {
 			return err
 		}
 	case PROTO_VERS_3_8:
-		err := c.securityHandshake38()
-		if err != nil {
+		if err := c.securityHandshake38(); err != nil {
 			return err
 		}
 	default:
@@ -88,6 +102,10 @@ func (c *ClientConn) securityHandshake() error {
 }
 
 func (c *ClientConn) securityHandshake33() error {
+	if c.debug {
+		log.Print("securityHandshake33()")
+	}
+
 	var secType uint32
 	if err := c.receive(&secType); err != nil {
 		return err
@@ -116,6 +134,10 @@ func (c *ClientConn) securityHandshake33() error {
 }
 
 func (c *ClientConn) securityHandshake38() error {
+	if c.debug {
+		log.Print("securityHandshake38()")
+	}
+
 	// Determine server supported security types.
 	var numSecurityTypes uint8
 	if err := c.receive(&numSecurityTypes); err != nil {
@@ -161,6 +183,10 @@ FindAuth:
 
 // securityResultHandshake implements §7.1.3 SecurityResult Handshake.
 func (c *ClientConn) securityResultHandshake() error {
+	if c.debug {
+		log.Print("securityResultHandshake()")
+	}
+
 	if c.protocolVersion == PROTO_VERS_3_3 {
 		// Not required for 3.3.
 		return nil
