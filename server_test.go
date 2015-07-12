@@ -27,11 +27,9 @@ func TestFramebufferUpdate(t *testing.T) {
 			t.Error(err)
 			continue
 		}
-		for _, r := range tt.rects {
-			if err := conn.send(r); err != nil {
-				t.Error(err)
-				continue
-			}
+		if err := conn.send(tt.rects); err != nil {
+			t.Error(err)
+			continue
 		}
 
 		// Validate message handling.
@@ -73,12 +71,8 @@ func TestFramebufferUpdate(t *testing.T) {
 	}
 }
 
-func TestSetColorMapEntries(t *testing.T) {
+func TestSetColorMapEntries(t *testing.T) {}
 
-}
-
-func TestBell(t *testing.T) {
-
-}
+func TestBell(t *testing.T) {}
 
 func TestServerCutText(t *testing.T) {}

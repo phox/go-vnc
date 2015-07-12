@@ -92,12 +92,14 @@ func (m *FramebufferUpdate) Read(c *ClientConn, r io.Reader) (ServerMessage, err
 	if err := c.receive(&numRects); err != nil {
 		return nil, err
 	}
+	var rectMsgs []RectangleMessage
+	if err := c.receiveN(&rectMsgs, int(numRects)); err != nil {
+		return nil, err
+	}
+
+	// Extract rectangles.
 	rects := make([]Rectangle, numRects)
-	for i := uint16(0); i < numRects; i++ {
-		var msg RectangleMessage
-		if err := c.receive(&msg); err != nil {
-			return nil, err
-		}
+	for i, msg := range rectMsgs {
 		enc, ok := encMap[msg.Encoding]
 		if !ok {
 			return nil, fmt.Errorf("unsupported encoding type: %d", msg.Encoding)

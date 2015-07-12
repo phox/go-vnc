@@ -236,8 +236,6 @@ func (c *ClientConn) ListenAndHandle() error {
 	return nil
 }
 
-// TODO(kward): move the send and receive functions to common.go.
-
 // receive a packet from the network.
 func (c *ClientConn) receive(data interface{}) error {
 	if err := binary.Read(c.c, binary.BigEndian, data); err != nil {
@@ -266,6 +264,15 @@ func (c *ClientConn) receiveN(data interface{}, n int) error {
 				return err
 			}
 			slice := data.(*[]int32)
+			*slice = append(*slice, v)
+		}
+	case *[]RectangleMessage:
+		var v RectangleMessage
+		for i := 0; i < n; i++ {
+			if err := binary.Read(c.c, binary.BigEndian, &v); err != nil {
+				return err
+			}
+			slice := data.(*[]RectangleMessage)
 			*slice = append(*slice, v)
 		}
 	default:
