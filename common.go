@@ -1,6 +1,5 @@
-/*
-common.go provides common things that aren't part of the RFB protocol.
-*/
+// Common things that aren't part of the RFB protocol.
+
 package vnc
 
 import "time"

@@ -1,7 +1,5 @@
-/*
-pixel_format.go implements RFC 6143 §7.4 Pixel Format Data Structure.
-See http://tools.ietf.org/html/rfc6143#section-7.4 for more info.
-*/
+// Implementation of RFC 6143 §7.4 Pixel Format Data Structure.
+
 package vnc
 
 import (

@@ -1,7 +1,5 @@
-/*
-security.go implements RFC 6143 §7.2 Security Types.
-See http://tools.ietf.org/html/rfc6143#section-7.2 for more info.
-*/
+// Implementation of RFC 6143 §7.2 Security Types.
+
 package vnc
 
 import (

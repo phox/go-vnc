@@ -1,7 +1,5 @@
-/*
-encodings.go implements RFC 6143 §7.7 Encodings.
-See http://tools.ietf.org/html/rfc6143#section-7.7 for more info.
-*/
+// Implementation of RFC 6143 §7.7 Encodings.
+
 package vnc
 
 import (

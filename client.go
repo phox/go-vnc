@@ -1,7 +1,5 @@
-/*
-client.go implements RFC 6143 §7.5 Client-to-Server Messages.
-See http://tools.ietf.org/html/rfc6143#section-7.5 for more info.
-*/
+// Implementation of §7.5 Client-to-Server Messages.
+
 package vnc
 
 import (
