@@ -6,7 +6,9 @@ import (
 )
 
 func TestCounter(t *testing.T) {
-	c := Counter{}
+	reset()
+
+	c := NewCounter("test")
 	if got, want := c.Value(), uint64(0); got != want {
 		t.Errorf("initial value incorrect; got = %v, want = %v", got, want)
 	}
@@ -15,10 +17,21 @@ func TestCounter(t *testing.T) {
 	if got, want := c.Value(), uint64(1); got != want {
 		t.Errorf("incremented value incorrect; got = %v, want = %v", got, want)
 	}
+
+	c.Reset()
+	if got, want := c.Value(), uint64(0); got != want {
+		t.Errorf("reset value incorrect; got = %v, want = %v", got, want)
+	}
+
+	if got, want := c.Name(), "test"; got != want {
+		t.Errorf("name incorrect; got = %v, want = %v", got, want)
+	}
 }
 
 func TestGauge(t *testing.T) {
-	c := Gauge{}
+	reset()
+
+	c := NewGauge("test")
 	if got, want := c.Value(), uint64(0); got != want {
 		t.Errorf("initial value incorrect; got = %v, want = %v", got, want)
 	}
@@ -43,5 +56,14 @@ func TestGauge(t *testing.T) {
 	c.Adjust(math.MaxInt64)
 	if got, want := c.Value(), uint64(math.MaxUint64); got != want {
 		t.Errorf("maximum value incorrect; got = %v, want = %v", got, want)
+	}
+
+	c.Reset()
+	if got, want := c.Value(), uint64(0); got != want {
+		t.Errorf("reset value incorrect; got = %v, want = %v", got, want)
+	}
+
+	if got, want := c.Name(), "test"; got != want {
+		t.Errorf("name incorrect; got = %v, want = %v", got, want)
 	}
 }
