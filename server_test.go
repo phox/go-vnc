@@ -4,9 +4,9 @@ import "testing"
 
 func TestFramebufferUpdate(t *testing.T) {
 	tests := []struct {
-		rects []Rectangle
+		rects []RectangleMessage
 	}{
-		{[]Rectangle{{10, 20, 30, 40, NewRawEncoding([]Color{})}}},
+		{[]RectangleMessage{{10, 20, 30, 40, Raw}}},
 	}
 
 	mockConn := &MockConn{}
@@ -19,65 +19,55 @@ func TestFramebufferUpdate(t *testing.T) {
 		mockConn.Reset()
 
 		// Send the message.
-		msg := NewFramebufferUpdateMessage(tt.rects)
-		if err := conn.send(&msg.Msg); err != nil {
-			t.Fatal(err)
+		msg := &FramebufferUpdateMessage{
+			Msg:     FramebufferUpdateMsg,
+			NumRect: uint16(len(tt.rects)),
 		}
-		for i := range msg.Pad {
-			if err := conn.send(&msg.Pad[i]); err != nil {
-				t.Fatal(err)
-			}
+		if err := conn.send(msg); err != nil {
+			t.Error(err)
+			continue
 		}
-		if err := conn.send(&msg.NumRect); err != nil {
-			t.Fatal(err)
-		}
-		for _, r := range msg.Rects {
-			if err := conn.send(&r.X); err != nil {
-				t.Fatal(err)
-			}
-			if err := conn.send(&r.Y); err != nil {
-				t.Fatal(err)
-			}
-			if err := conn.send(&r.Width); err != nil {
-				t.Fatal(err)
-			}
-			if err := conn.send(&r.Height); err != nil {
-				t.Fatal(err)
-			}
-			if err := conn.send(r.Enc.Type()); err != nil {
-				t.Fatal(err)
+		for _, r := range tt.rects {
+			if err := conn.send(r); err != nil {
+				t.Error(err)
+				continue
 			}
 		}
 
 		// Validate message handling.
 		var messageType uint8
 		if err := conn.receive(&messageType); err != nil {
-			t.Fatal(err)
+			t.Error(err)
+			continue
 		}
-		fu := NewFramebufferUpdateMessage([]Rectangle{})
+		fu := &FramebufferUpdate{}
 		parsedFU, err := fu.Read(conn, conn.c)
 		if err != nil {
-			t.Fatalf("FramebufferUpdate() unexpected error %v", err)
+			t.Errorf("unexpected error: %v", err)
+			continue
 		}
-		rects := parsedFU.(*FramebufferUpdateMessage).Rects
+		rects := parsedFU.(*FramebufferUpdate).Rects
+
+		// Validate the message.
 		if got, want := len(rects), len(tt.rects); got != want {
-			t.Errorf("FramebufferUpdate() number of rectangles doesn't match; got = %v, want = %v", got, want)
+			t.Errorf("incorrect number-of-rectangles; got = %v, want = %v", got, want)
+			continue
 		}
 		for i, r := range tt.rects {
 			if got, want := rects[i].X, r.X; got != want {
-				t.Errorf("FramebufferUpdate() rect #%v invalid X; got = %v, want = %v", i, got, want)
+				t.Errorf("rect[%v] incorrect x-position; got = %v, want = %v", i, got, want)
 			}
 			if got, want := rects[i].Y, r.Y; got != want {
-				t.Errorf("FramebufferUpdate() rect #%v invalid Y; got = %v, want = %v", i, got, want)
+				t.Errorf("rect[%v] incorrect y-position; got = %v, want = %v", i, got, want)
 			}
 			if got, want := rects[i].Width, r.Width; got != want {
-				t.Errorf("FramebufferUpdate() rect #%v invalid Width; got = %v, want = %v", i, got, want)
+				t.Errorf("rect[%v] incorrect width; got = %v, want = %v", i, got, want)
 			}
 			if got, want := rects[i].Height, r.Height; got != want {
-				t.Errorf("FramebufferUpdate() rect #%v invalid Height; got = %v, want = %v", i, got, want)
+				t.Errorf("rect[%v] incorrect height; got = %v, want = %v", i, got, want)
 			}
-			if got, want := rects[i].Enc.Type(), r.Enc.Type(); got != want {
-				t.Errorf("FramebufferUpdate() rect #%v invalid Enc; got = %v, want = %v", i, got, want)
+			if got, want := rects[i].Enc.Type(), r.Encoding; got != want {
+				t.Errorf("rect[%v] incorrect encoding-type; got = %v, want = %v", i, got, want)
 			}
 		}
 	}

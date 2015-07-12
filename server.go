@@ -11,11 +11,12 @@ import (
 	"log"
 )
 
+// TODO(kward): Add Msg suffix to these.
 const (
-	FramebufferUpdate = uint8(iota)
-	SetColorMapEntries
-	Bell
-	ServerCutText
+	FramebufferUpdateMsg = uint8(iota)
+	SetColorMapEntriesMsg
+	BellMsg
+	ServerCutTextMsg
 )
 
 // A ServerMessage implements a message sent from the server to the client.
@@ -29,85 +30,88 @@ type ServerMessage interface {
 	Read(*ClientConn, io.Reader) (ServerMessage, error)
 }
 
+// RectangleMessage holds the wire format message.
+type RectangleMessage struct {
+	X, Y          uint16 // x-, y-position
+	Width, Height uint16 // width, height
+	Encoding      int32  // encoding-type
+}
+
 // Rectangle represents a rectangle of pixel data.
 type Rectangle struct {
-	X, Y, Width, Height uint16
-	Enc                 Encoding
+	X, Y          uint16
+	Width, Height uint16
+	Enc           Encoding
 }
 
+// FramebufferUpdate holds the wire format message.
+type FramebufferUpdate struct {
+	Msg     uint8       // message-type
+	_       [1]byte     // padding
+	NumRect uint16      // number-of-rectangles
+	Rects   []Rectangle // rectangles
+}
+
+// FramebufferUpdateMessage holds the wire format message, sans rectangles.
 type FramebufferUpdateMessage struct {
-	Msg     uint8
-	Pad     [1]byte
-	NumRect uint16
-	Rects   []Rectangle
+	Msg     uint8   // message-type
+	_       [1]byte // padding
+	NumRect uint16  // number-of-rectangles
 }
 
-func NewFramebufferUpdateMessage(rects []Rectangle) *FramebufferUpdateMessage {
-	return &FramebufferUpdateMessage{
-		Msg:     FramebufferUpdate,
+func NewFramebufferUpdate(rects []Rectangle) *FramebufferUpdate {
+	return &FramebufferUpdate{
+		Msg:     FramebufferUpdateMsg,
 		NumRect: uint16(len(rects)),
 		Rects:   rects,
 	}
 }
 
-func (m *FramebufferUpdateMessage) Type() uint8 {
+func (m *FramebufferUpdate) Type() uint8 {
 	return m.Msg
 }
 
-func (m *FramebufferUpdateMessage) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
+func (m *FramebufferUpdate) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
 	// if c.debug {
-	// 	log.Print("FramebufferUpdateMessage.Read()")
+	// 	log.Print("FramebufferUpdate.Read()")
 	// }
-
-	// Read off the padding
-	if _, err := io.ReadFull(r, m.Pad[:]); err != nil {
-		return nil, err
-	}
-
-	var numRects uint16
-	if err := binary.Read(r, binary.BigEndian, &numRects); err != nil {
-		return nil, err
-	}
 
 	// Build the map of encodings supported
 	encMap := make(map[int32]Encoding)
 	for _, e := range c.Encodings() {
 		encMap[e.Type()] = e
 	}
+	encMap[Raw] = NewRawEncoding([]Color{}) // Raw encoding support required.
 
-	// We must always support the raw encoding
-	encMap[Raw] = NewRawEncoding([]Color{})
-
+	// Read packet.
+	var pad [1]byte
+	if err := c.receive(&pad); err != nil {
+		return nil, err
+	}
+	var numRects uint16
+	if err := c.receive(&numRects); err != nil {
+		return nil, err
+	}
 	rects := make([]Rectangle, numRects)
 	for i := uint16(0); i < numRects; i++ {
-		var encodingType int32
-
-		rect := &rects[i]
-		data := []interface{}{
-			&rect.X,
-			&rect.Y,
-			&rect.Width,
-			&rect.Height,
-			&encodingType,
-		}
-		for _, val := range data {
-			if err := binary.Read(r, binary.BigEndian, val); err != nil {
-				return nil, err
-			}
-		}
-		enc, ok := encMap[encodingType]
-		if !ok {
-			return nil, fmt.Errorf("unsupported encoding type: %d", encodingType)
-		}
-
-		var err error
-		rect.Enc, err = enc.Read(c, rect, r)
-		if err != nil {
+		var msg RectangleMessage
+		if err := c.receive(&msg); err != nil {
 			return nil, err
 		}
+		enc, ok := encMap[msg.Encoding]
+		if !ok {
+			return nil, fmt.Errorf("unsupported encoding type: %d", msg.Encoding)
+		}
+
+		rect := &rects[i]
+		rect.X = msg.X
+		rect.Y = msg.Y
+		rect.Width = msg.Width
+		rect.Height = msg.Height
+		rect.Enc = enc
 	}
 
-	return NewFramebufferUpdateMessage(rects), nil
+	return NewFramebufferUpdate(rects), nil
 }
 
 // SetColorMapEntries is sent by the server to set values into
@@ -122,18 +126,18 @@ type Color struct {
 	R, G, B uint16
 }
 
-type SetColorMapEntriesMessage struct {
+type SetColorMapEntries struct {
 	FirstColor uint16
 	Colors     []Color
 }
 
-func (*SetColorMapEntriesMessage) Type() uint8 {
-	return SetColorMapEntries
+func (*SetColorMapEntries) Type() uint8 {
+	return SetColorMapEntriesMsg
 }
 
-func (*SetColorMapEntriesMessage) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
+func (*SetColorMapEntries) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
 	if c.debug {
-		log.Print("SetColorMapEntriesMessage.Read()")
+		log.Print("SetColorMapEntries.Read()")
 	}
 
 	// Read off the padding
@@ -142,7 +146,7 @@ func (*SetColorMapEntriesMessage) Read(c *ClientConn, r io.Reader) (ServerMessag
 		return nil, err
 	}
 
-	var result SetColorMapEntriesMessage
+	var result SetColorMapEntries
 	if err := binary.Read(r, binary.BigEndian, &result.FirstColor); err != nil {
 		return nil, err
 	}
@@ -178,34 +182,34 @@ func (*SetColorMapEntriesMessage) Read(c *ClientConn, r io.Reader) (ServerMessag
 // Bell signals that an audible bell should be made on the client.
 //
 // See RFC 6143 Section 7.6.3
-type BellMessage struct{}
+type Bell struct{}
 
-func (*BellMessage) Type() uint8 {
-	return Bell
+func (*Bell) Type() uint8 {
+	return BellMsg
 }
 
-func (*BellMessage) Read(c *ClientConn, _ io.Reader) (ServerMessage, error) {
+func (*Bell) Read(c *ClientConn, _ io.Reader) (ServerMessage, error) {
 	if c.debug {
-		log.Print("BellMessage.Read()")
+		log.Print("Bell.Read()")
 	}
 
-	return new(BellMessage), nil
+	return new(Bell), nil
 }
 
 // ServerCutText indicates the server has new text in the cut buffer.
 //
 // See RFC 6143 Section 7.6.4
-type ServerCutTextMessage struct {
+type ServerCutText struct {
 	Text string
 }
 
-func (*ServerCutTextMessage) Type() uint8 {
-	return ServerCutText
+func (*ServerCutText) Type() uint8 {
+	return ServerCutTextMsg
 }
 
-func (*ServerCutTextMessage) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
+func (*ServerCutText) Read(c *ClientConn, r io.Reader) (ServerMessage, error) {
 	if c.debug {
-		log.Print("ServerCutTextMessage.Read()")
+		log.Print("ServerCutText.Read()")
 	}
 
 	// Read off the padding
@@ -224,5 +228,5 @@ func (*ServerCutTextMessage) Read(c *ClientConn, r io.Reader) (ServerMessage, er
 		return nil, err
 	}
 
-	return &ServerCutTextMessage{string(textBytes)}, nil
+	return &ServerCutText{string(textBytes)}, nil
 }

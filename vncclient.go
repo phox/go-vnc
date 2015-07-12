@@ -93,10 +93,10 @@ func NewClientConfig(p string) *ClientConfig {
 		},
 		Password: p,
 		ServerMessages: []ServerMessage{
-			NewFramebufferUpdateMessage(nil),
-			&SetColorMapEntriesMessage{},
-			&BellMessage{},
-			&ServerCutTextMessage{},
+			&FramebufferUpdate{},
+			&SetColorMapEntries{},
+			&Bell{},
+			&ServerCutText{},
 		},
 	}
 }
@@ -235,6 +235,8 @@ func (c *ClientConn) ListenAndHandle() error {
 
 	return nil
 }
+
+// TODO(kward): move the send and receive functions to common.go.
 
 // receive a packet from the network.
 func (c *ClientConn) receive(data interface{}) error {
