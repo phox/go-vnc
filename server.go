@@ -9,7 +9,6 @@ import (
 	"log"
 )
 
-// TODO(kward): Add Msg suffix to these.
 const (
 	FramebufferUpdateMsg = uint8(iota)
 	SetColorMapEntriesMsg
