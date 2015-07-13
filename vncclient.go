@@ -265,15 +265,6 @@ func (c *ClientConn) receiveN(data interface{}, n int) error {
 			slice := data.(*[]int32)
 			*slice = append(*slice, v)
 		}
-	case *[]RectangleMessage:
-		var v RectangleMessage
-		for i := 0; i < n; i++ {
-			if err := binary.Read(c.c, binary.BigEndian, &v); err != nil {
-				return err
-			}
-			slice := data.(*[]RectangleMessage)
-			*slice = append(*slice, v)
-		}
 	default:
 		return NewVNCError(fmt.Sprintf("Unable to receive data; unrecognized data type %v", reflect.TypeOf(data)))
 	}
