@@ -23,6 +23,21 @@ Sample code usage is available in the GoDoc.
 
 - Connect and listen to server messages: <https://godoc.org/github.com/kward/go-vnc#example-Connect>
 
+The source code is laid out such that the files match the document sections:
+
+- [7.1] handshake.go
+- [7.2] security.go
+- [7.3] initialization.go
+- [7.4] pixel_format.go
+- [7.5] client.go
+- [7.6] server.go
+- [7.7] encodings.go
+
+There are two additional files that provide everything else:
+
+- vncclient.go -- code for instantiating a VNC client
+- common.go -- common stuff not related to the RFB protocol
+
 
 <!--- Links -->
 [RFC6143]: http://tools.ietf.org/html/rfc6143
