@@ -1,8 +1,8 @@
 # VNC Library for Go
-go-vnc is a VNC library for Go, initially supporting VNC clients but
-with the goal of eventually implementing a VNC server.
+go-vnc is a VNC client library for Go.
 
-This library implements [RFC 6143][RFC6143].
+This library implements [RFC 6143][RFC6143] -- The Remote Framebuffer Protocol
+-- the protocol used by VNC.
 
 ## Project links
 * Build Status:  [![Build Status][CIStatus]][CIProject]
