@@ -32,19 +32,26 @@ func (c *ClientConn) serverInit() error {
 	if err := c.receive(&width); err != nil {
 		return err
 	}
+	c.setFramebufferWidth(width)
 	if err := c.receive(&height); err != nil {
 		return err
 	}
-	c.setFramebufferWidth(width)
 	c.setFramebufferHeight(height)
 	if err := c.pixelFormat.Write(c.c); err != nil {
 		return err
+	}
+	if c.debug {
+		log.Printf("pixelFormat:%v", c.pixelFormat)
 	}
 
 	var nameLength uint32
 	if err := c.receive(&nameLength); err != nil {
 		return err
 	}
+	if c.debug {
+		log.Printf("nameLength:%v", nameLength)
+	}
+
 	nameBytes := make([]uint8, nameLength)
 	if err := c.receive(&nameBytes); err != nil {
 		return err

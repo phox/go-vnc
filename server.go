@@ -83,6 +83,10 @@ func (m *FramebufferUpdate) Read(c *ClientConn) (ServerMessage, error) {
 	if err := c.receive(&pad); err != nil {
 		return nil, err
 	}
+	if c.debug {
+		log.Printf("pad:%v", pad)
+	}
+
 	var numRects uint16
 	if err := c.receive(&numRects); err != nil {
 		return nil, err
@@ -97,6 +101,9 @@ func (m *FramebufferUpdate) Read(c *ClientConn) (ServerMessage, error) {
 		var msg RectangleMessage
 		if err := c.receive(&msg); err != nil {
 			return nil, err
+		}
+		if c.debug {
+			log.Printf("rect:%v", msg)
 		}
 
 		enc, ok := encMap[msg.Encoding]
