@@ -55,7 +55,6 @@ func TestRectangle_Unmarshal(t *testing.T) {
 func TestFramebufferUpdate(t *testing.T) {
 	mockConn := &MockConn{}
 	conn := NewClientConn(mockConn, &ClientConfig{})
-	conn.SetDebug(true)
 	// Use empty PixelFormat so that the BPP is zero, and rects won't be read.
 	// TODO(kward): give some real rectangles so this hack isn't necessary.
 	conn.pixelFormat = PixelFormat{}
