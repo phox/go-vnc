@@ -5,6 +5,8 @@ package vnc
 import (
 	"fmt"
 	"log"
+
+	"golang.org/x/net/context"
 )
 
 const pvLen = 12 // ProtocolVersion message length.
@@ -35,7 +37,7 @@ const (
 )
 
 // protocolVersionHandshake implements §7.1.1 ProtocolVersion Handshake.
-func (c *ClientConn) protocolVersionHandshake() error {
+func (c *ClientConn) protocolVersionHandshake(ctx context.Context) error {
 	if c.debug {
 		log.Print("protocolVersionHandshake()")
 	}
@@ -65,6 +67,16 @@ func (c *ClientConn) protocolVersionHandshake() error {
 	if pv == PROTO_VERS_UNSUP {
 		return NewVNCError(fmt.Sprintf("ProtocolVersion handshake failed; unsupported version '%v'", string(protocolVersion[:])))
 	}
+
+	if mpv := ctx.Value("vnc_max_proto_version"); mpv != nil && mpv != "" {
+		switch mpv {
+		case "3.3":
+			pv = PROTO_VERS_3_3
+		case "3.8":
+			pv = PROTO_VERS_3_8
+		}
+	}
+
 	c.protocolVersion = pv
 
 	// Respond with the version we will support
@@ -96,6 +108,7 @@ func (c *ClientConn) securityHandshake() error {
 	default:
 		return NewVNCError(fmt.Sprintf("Security handshake failed; unsupported protocol"))
 	}
+
 	return nil
 }
 
@@ -110,7 +123,7 @@ func (c *ClientConn) securityHandshake33() error {
 	}
 
 	var auth ClientAuth
-	switch secType {
+	switch uint8(secType) { // 3.3 uses uint32, but 3.8 uses uint8. Unify on 3.8.
 	case secTypeInvalid: // Connection failed.
 		reason, err := c.readErrorReason()
 		if err != nil {
@@ -124,6 +137,7 @@ func (c *ClientConn) securityHandshake33() error {
 	default:
 		return NewVNCError(fmt.Sprintf("Security handshake failed; invalid security type: %v", secType))
 	}
+	c.config.secType = auth.SecurityType()
 	if err := auth.Handshake(c); err != nil {
 		return err
 	}
@@ -152,6 +166,9 @@ func (c *ClientConn) securityHandshake38() error {
 	if err := c.receive(&securityTypes); err != nil {
 		return err
 	}
+	if c.debug {
+		log.Printf("server supported securityTypes: %v", securityTypes)
+	}
 
 	// Choose client security type.
 	// TODO(kward): try "better" security types first.
@@ -172,7 +189,7 @@ FindAuth:
 	if err := c.send(auth.SecurityType()); err != nil {
 		return err
 	}
-
+	c.config.secType = auth.SecurityType()
 	if err := auth.Handshake(c); err != nil {
 		return err
 	}
@@ -185,8 +202,7 @@ func (c *ClientConn) securityResultHandshake() error {
 		log.Print("securityResultHandshake()")
 	}
 
-	if c.protocolVersion == PROTO_VERS_3_3 {
-		// Not required for 3.3.
+	if c.config.secType == secTypeNone {
 		return nil
 	}
 
@@ -194,13 +210,18 @@ func (c *ClientConn) securityResultHandshake() error {
 	if err := c.receive(&securityResult); err != nil {
 		return err
 	}
-	if securityResult == 1 {
+	switch securityResult {
+	case 0:
+	case 1:
 		reason, err := c.readErrorReason()
 		if err != nil {
 			return err
 		}
 		return NewVNCError(fmt.Sprintf("SecurityResult handshake failed: %s", reason))
+	default:
+		return NewVNCError(fmt.Sprintf("Invalid SecurityResult status: %v", securityResult))
 	}
+
 	return nil
 }
 

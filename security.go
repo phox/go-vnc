@@ -8,9 +8,9 @@ import (
 )
 
 const (
-	secTypeInvalid = iota
-	secTypeNone
-	secTypeVNCAuth
+	secTypeInvalid = uint8(0)
+	secTypeNone    = uint8(1)
+	secTypeVNCAuth = uint8(2)
 )
 
 // ClientAuth implements a method of authenticating with a remote server.
@@ -24,7 +24,7 @@ type ClientAuth interface {
 	Handshake(*ClientConn) error
 }
 
-// ClientAuthNone is the "none" authentication. See 7.2.1
+// ClientAuthNone is the "none" authentication. See 7.2.1.
 type ClientAuthNone struct{}
 
 func (*ClientAuthNone) SecurityType() uint8 {
@@ -39,17 +39,16 @@ func (*ClientAuthNone) Handshake(conn *ClientConn) error {
 	return nil
 }
 
-// ClientAuthVNC is the standard password authentication.
+// ClientAuthVNC is the standard password authentication. See 7.2.2.
 type ClientAuthVNC struct {
 	Password string
 }
 
+type vncAuthChallenge [16]byte
+
 func (*ClientAuthVNC) SecurityType() uint8 {
 	return secTypeVNCAuth
 }
-
-// 7.2.2. VNC Authentication uses a 16-byte challenge.
-const vncAuthChallengeSize = 16
 
 func (auth *ClientAuthVNC) Handshake(conn *ClientConn) error {
 	if conn.debug {
@@ -57,11 +56,11 @@ func (auth *ClientAuthVNC) Handshake(conn *ClientConn) error {
 	}
 
 	if auth.Password == "" {
-		return NewVNCError("securityHandshake: handshake failed; no password provided for VNCAuth.")
+		return NewVNCError("Security Handshake failed; no password provided for VNCAuth.")
 	}
 
 	// Read challenge block
-	var challenge [vncAuthChallengeSize]byte
+	var challenge vncAuthChallenge
 	if err := conn.receive(&challenge); err != nil {
 		return err
 	}
@@ -76,7 +75,7 @@ func (auth *ClientAuthVNC) Handshake(conn *ClientConn) error {
 	return nil
 }
 
-func (auth *ClientAuthVNC) encode(c *[vncAuthChallengeSize]byte) error {
+func (auth *ClientAuthVNC) encode(ch *vncAuthChallenge) error {
 	// Copy password string to 8 byte 0-padded slice
 	key := make([]byte, 8)
 	copy(key, auth.Password)
@@ -94,8 +93,8 @@ func (auth *ClientAuthVNC) encode(c *[vncAuthChallengeSize]byte) error {
 	if err != nil {
 		return err
 	}
-	for i := 0; i < vncAuthChallengeSize; i += cipher.BlockSize() {
-		cipher.Encrypt(c[i:i+cipher.BlockSize()], c[i:i+cipher.BlockSize()])
+	for i := 0; i < len(ch); i += cipher.BlockSize() {
+		cipher.Encrypt(ch[i:i+cipher.BlockSize()], ch[i:i+cipher.BlockSize()])
 	}
 
 	return nil

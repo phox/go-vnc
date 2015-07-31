@@ -10,10 +10,12 @@ func (c *ClientConn) clientInit() error {
 		log.Print("clientInit()")
 	}
 
-	var sharedFlag uint8
-
+	sharedFlag := uint8(0)
 	if !c.config.Exclusive {
 		sharedFlag = 1
+	}
+	if c.debug {
+		log.Printf("sharedFlag: %v", sharedFlag)
 	}
 	if err := c.send(sharedFlag); err != nil {
 		return err
@@ -37,7 +39,8 @@ func (c *ClientConn) serverInit() error {
 	}
 	c.setFramebufferWidth(width)
 	c.setFramebufferHeight(height)
-	if err := c.pixelFormat.Write(c.c); err != nil {
+
+	if err := c.pixelFormat.Read(c.c); err != nil {
 		return err
 	}
 

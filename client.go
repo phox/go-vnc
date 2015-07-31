@@ -60,27 +60,41 @@ type SetEncodingsMessage struct {
 // be modified.
 //
 // See RFC 6143 Section 7.5.2
-func (c *ClientConn) SetEncodings(e []Encoding) error {
+func (c *ClientConn) SetEncodings(encs Encodings) error {
+	// Make sure RawEncoding is supported.
+	haveRaw := false
+	for _, v := range encs {
+		if v.Type() == Raw {
+			haveRaw = true
+			break
+		}
+	}
+	if !haveRaw {
+		encs = append(encs, &RawEncoding{})
+	}
+
+	buf := NewBuffer(nil)
+
 	// Prepare message.
 	msg := SetEncodingsMessage{
 		Msg:     setEncodingsMsg,
-		NumEncs: uint16(len(e)),
+		NumEncs: uint16(len(encs)),
 	}
-	var encs []int32 // encoding-type
-
-	for _, v := range e {
-		encs = append(encs, int32(v.Type()))
+	if err := buf.Write(msg); err != nil {
+		return err
 	}
+	bytes, err := encs.Marshal()
+	if err != nil {
+		return err
+	}
+	buf.WriteBytes(bytes)
 
 	// Send message.
-	if err := c.send(msg); err != nil {
-		return err
-	}
-	if err := c.sendN(encs); err != nil {
+	if err := c.send(buf.Bytes()); err != nil {
 		return err
 	}
 
-	c.encodings = e
+	c.encodings = encs
 	return nil
 }
 
@@ -222,7 +236,7 @@ func (c *ClientConn) ClientCutText(text string) error {
 	if err := c.send(msg); err != nil {
 		return err
 	}
-	if err := c.sendN([]byte(text)); err != nil {
+	if err := c.send([]byte(text)); err != nil {
 		return err
 	}
 

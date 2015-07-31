@@ -13,37 +13,36 @@ import (
 )
 
 func TestSetPixelFormat(t *testing.T) {
-	max := uint16(math.Exp2(16))
-	pf := PixelFormat{
-		BPP:       16,
-		Depth:     16,
-		BigEndian: RFBTrue,
-		TrueColor: RFBTrue,
-		RedMax:    max,
-		GreenMax:  max,
-		BlueMax:   max,
-	}
-
 	tests := []struct {
 		pf  PixelFormat
 		msg SetPixelFormatMessage
 	}{
-		{PixelFormat{},
+		{
+			PixelFormat{},
 			SetPixelFormatMessage{
 				Msg: setPixelFormatMsg,
 			}},
-		{NewPixelFormat(),
+		{
+			NewPixelFormat(16),
 			SetPixelFormatMessage{
 				Msg: setPixelFormatMsg,
-				PF:  pf,
+				PF: PixelFormat{
+					BPP:        16,
+					Depth:      16,
+					BigEndian:  RFBTrue,
+					TrueColor:  RFBTrue,
+					RedMax:     uint16(math.Exp2(16)) - 1,
+					GreenMax:   uint16(math.Exp2(16)) - 1,
+					BlueMax:    uint16(math.Exp2(16)) - 1,
+					RedShift:   0,
+					GreenShift: 4,
+					BlueShift:  8,
+				},
 			}},
 	}
 
 	mockConn := &MockConn{}
-	conn := &ClientConn{
-		c:      mockConn,
-		config: &ClientConfig{},
-	}
+	conn := NewClientConn(mockConn, &ClientConfig{})
 
 	for _, tt := range tests {
 		mockConn.Reset()
@@ -76,17 +75,14 @@ func TestSetPixelFormat(t *testing.T) {
 
 func TestSetEncodings(t *testing.T) {
 	tests := []struct {
-		encs     []Encoding
+		encs     Encodings
 		encTypes []int32
 	}{
-		{[]Encoding{NewRawEncoding([]Color{})}, []int32{0}},
+		{Encodings{&RawEncoding{}}, []int32{0}},
 	}
 
 	mockConn := &MockConn{}
-	conn := &ClientConn{
-		c:      mockConn,
-		config: &ClientConfig{},
-	}
+	conn := NewClientConn(mockConn, &ClientConfig{})
 
 	for _, tt := range tests {
 		mockConn.Reset()
@@ -138,10 +134,7 @@ func TestFramebufferUpdateRequest(t *testing.T) {
 	}
 
 	mockConn := &MockConn{}
-	conn := &ClientConn{
-		c:      mockConn,
-		config: &ClientConfig{},
-	}
+	conn := NewClientConn(mockConn, &ClientConfig{})
 
 	for _, tt := range tests {
 		mockConn.Reset()
@@ -213,10 +206,7 @@ func TestKeyEvent(t *testing.T) {
 	}
 
 	mockConn := &MockConn{}
-	conn := &ClientConn{
-		c:      mockConn,
-		config: &ClientConfig{},
-	}
+	conn := NewClientConn(mockConn, &ClientConfig{})
 
 	SetSettle(0) // Disable UI settling for tests.
 	for _, tt := range tests {
@@ -291,10 +281,7 @@ func TestPointerEvent(t *testing.T) {
 	}
 
 	mockConn := &MockConn{}
-	conn := &ClientConn{
-		c:      mockConn,
-		config: &ClientConfig{},
-	}
+	conn := NewClientConn(mockConn, &ClientConfig{})
 
 	SetSettle(0) // Disable UI settling for tests.
 	for _, tt := range tests {
@@ -343,10 +330,7 @@ func TestClientCutText(t *testing.T) {
 	}
 
 	mockConn := &MockConn{}
-	conn := &ClientConn{
-		c:      mockConn,
-		config: &ClientConfig{},
-	}
+	conn := NewClientConn(mockConn, &ClientConfig{})
 
 	SetSettle(0) // Disable UI settling for tests.
 	for _, tt := range tests {

@@ -16,19 +16,13 @@ import (
 
 // Connect negotiates a connection to a VNC server.
 func Connect(ctx context.Context, c net.Conn, cfg *ClientConfig) (*ClientConn, error) {
-	conn := &ClientConn{
-		c:      c,
-		config: cfg,
-		metrics: map[string]metrics.Metric{
-			"bytes-received": &metrics.Gauge{},
-			"bytes-sent":     &metrics.Gauge{},
-		},
-	}
-	if debug := ctx.Value("debug"); debug != nil {
-		conn.SetDebug(debug.(bool))
+	conn := NewClientConn(c, cfg)
+
+	if err := conn.processContext(ctx); err != nil {
+		log.Fatal("invalid context: %v", err)
 	}
 
-	if err := conn.protocolVersionHandshake(); err != nil {
+	if err := conn.protocolVersionHandshake(ctx); err != nil {
 		conn.Close()
 		return nil, err
 	}
@@ -55,6 +49,8 @@ func Connect(ctx context.Context, c net.Conn, cfg *ClientConfig) (*ClientConn, e
 // A ClientConfig structure is used to configure a ClientConn. After
 // one has been passed to initialize a connection, it must not be modified.
 type ClientConfig struct {
+	secType uint8 // The negotiated security type.
+
 	// A slice of ClientAuth methods. Only the first instance that is
 	// suitable by the server will be used to authenticate.
 	Auth []ClientAuth
@@ -106,14 +102,15 @@ type ClientConn struct {
 	// If the pixel format uses a color map, then this is the color
 	// map that is used. This should not be modified directly, since
 	// the data comes from the server.
-	colorMap [256]Color
+	// Definition in §5 - Representation of Pixel Data.
+	colorMap ColorMap
 
 	// Name associated with the desktop, sent from the server.
 	desktopName string
 
 	// Encodings supported by the client. This should not be modified
 	// directly. Instead, SetEncodings should be used.
-	encodings []Encoding
+	encodings Encodings
 
 	// Height of the frame buffer in pixels, sent from the server.
 	fbHeight uint16
@@ -131,6 +128,19 @@ type ClientConn struct {
 
 	// Flag to determine whether debug output should be provided.
 	debug bool
+}
+
+func NewClientConn(c net.Conn, cfg *ClientConfig) *ClientConn {
+	return &ClientConn{
+		c:           c,
+		config:      cfg,
+		encodings:   Encodings{&RawEncoding{}},
+		pixelFormat: PixelFormat32bit,
+		metrics: map[string]metrics.Metric{
+			"bytes-received": &metrics.Gauge{},
+			"bytes-sent":     &metrics.Gauge{},
+		},
+	}
 }
 
 // Close a connection to a VNC server.
@@ -153,7 +163,7 @@ func (c *ClientConn) setDesktopName(name string) {
 }
 
 // Encodings returns the server provided encodings.
-func (c *ClientConn) Encodings() []Encoding {
+func (c *ClientConn) Encodings() Encodings {
 	return c.encodings
 }
 
@@ -191,6 +201,9 @@ func (c *ClientConn) SetDebug(debug bool) {
 
 // ListenAndHandle listens to a VNC server and handles server messages.
 func (c *ClientConn) ListenAndHandle() error {
+	if c.debug {
+		log.Println("ListenAndHanndle()")
+	}
 	defer c.Close()
 
 	if c.config.ServerMessages == nil {
@@ -240,12 +253,17 @@ func (c *ClientConn) receive(data interface{}) error {
 	if err := binary.Read(c.c, binary.BigEndian, data); err != nil {
 		return err
 	}
-	//metrics.Adjust("bytes-received", int64(binary.Size(data)))
+	c.metrics["bytes-received"].Adjust(int64(binary.Size(data)))
 	return nil
 }
 
-// receiveN receives N bytes from the network.
+// receiveN receives N packets from the network.
 func (c *ClientConn) receiveN(data interface{}, n int) error {
+	if n == 0 {
+		log.Println("receiveN requested no data")
+		return nil
+	}
+
 	switch data.(type) {
 	case *[]uint8:
 		var v uint8
@@ -265,41 +283,76 @@ func (c *ClientConn) receiveN(data interface{}, n int) error {
 			slice := data.(*[]int32)
 			*slice = append(*slice, v)
 		}
+	case *bytes.Buffer:
+		var v byte
+		for i := 0; i < n; i++ {
+			if err := binary.Read(c.c, binary.BigEndian, &v); err != nil {
+				return err
+			}
+			buf := data.(*bytes.Buffer)
+			buf.WriteByte(v)
+		}
 	default:
-		return NewVNCError(fmt.Sprintf("Unable to receive data; unrecognized data type %v", reflect.TypeOf(data)))
+		return NewVNCError(fmt.Sprintf("unrecognized data type %v", reflect.TypeOf(data)))
 	}
-	//c.metrics["bytes-received"].Adjust(int64(binary.Size(data)))
+	c.metrics["bytes-received"].Adjust(int64(binary.Size(data)))
 	return nil
 }
 
 // send a packet to the network.
 func (c *ClientConn) send(data interface{}) error {
-	//c.metrics["bytes-sent"].Adjust(int64(binary.Size(data)))
-	return binary.Write(c.c, binary.BigEndian, data)
-}
-
-// sendN sends N bytes to the network.
-func (c *ClientConn) sendN(data interface{}) error {
-	//c.metrics["bytes-sent"].Adjust(int64(binary.Size(data)))
-	var buf bytes.Buffer
-	switch data := data.(type) {
-	case []uint8:
-		for _, d := range data {
-			if err := binary.Write(&buf, binary.BigEndian, &d); err != nil {
-				return err
-			}
-		}
-	case []int32:
-		for _, d := range data {
-			if err := binary.Write(&buf, binary.BigEndian, &d); err != nil {
-				return err
-			}
-		}
-	default:
-		return NewVNCError(fmt.Sprintf("Unable to send data; unrecognized data type %v", reflect.TypeOf(data)))
-	}
-	if err := binary.Write(c.c, binary.BigEndian, buf.Bytes()); err != nil {
+	if err := binary.Write(c.c, binary.BigEndian, data); err != nil {
 		return err
 	}
+	c.metrics["bytes-sent"].Adjust(int64(binary.Size(data)))
+	return nil
+}
+
+// sendN sends N packets to the network.
+// func (c *ClientConn) sendN(data interface{}, n int) error {
+// 	var buf bytes.Buffer
+// 	switch data := data.(type) {
+// 	case []uint8:
+// 		for _, d := range data {
+// 			if err := binary.Write(&buf, binary.BigEndian, &d); err != nil {
+// 				return err
+// 			}
+// 		}
+// 	case []int32:
+// 		for _, d := range data {
+// 			if err := binary.Write(&buf, binary.BigEndian, &d); err != nil {
+// 				return err
+// 			}
+// 		}
+// 	default:
+// 		return NewVNCError(fmt.Sprintf("unable to send data; unrecognized data type %v", reflect.TypeOf(data)))
+// 	}
+// 	if err := binary.Write(c.c, binary.BigEndian, buf.Bytes()); err != nil {
+// 		return err
+// 	}
+// 	c.metrics["bytes-sent"].Adjust(int64(binary.Size(data)))
+// 	return nil
+// }
+
+func (c *ClientConn) processContext(ctx context.Context) error {
+	if debug := ctx.Value("debug"); debug != nil {
+		c.SetDebug(debug.(bool))
+	}
+
+	if mpv := ctx.Value("vnc_max_proto_version"); mpv != nil && mpv != "" {
+		log.Printf("vnc_max_proto_version: %v", mpv)
+		vers := []string{"3.3", "3.8"}
+		valid := false
+		for _, v := range vers {
+			if mpv == v {
+				valid = true
+				break
+			}
+		}
+		if !valid {
+			return fmt.Errorf("Invalid max protocol version %v; supported versions are %v", mpv, vers)
+		}
+	}
+
 	return nil
 }

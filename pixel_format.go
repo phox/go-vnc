@@ -3,11 +3,16 @@
 package vnc
 
 import (
-	"bytes"
 	"encoding/binary"
 	"fmt"
 	"io"
 	"math"
+)
+
+var (
+	PixelFormat8bit  PixelFormat = NewPixelFormat(8)
+	PixelFormat16bit PixelFormat = NewPixelFormat(16)
+	PixelFormat32bit PixelFormat = NewPixelFormat(32)
 )
 
 // PixelFormat describes the way a pixel is formatted for a VNC connection.
@@ -22,20 +27,31 @@ type PixelFormat struct {
 }
 
 // NewPixelFormat returns a populated PixelFormat structure.
-func NewPixelFormat() PixelFormat {
-	return PixelFormat{
-		16, 16, RFBTrue, RFBTrue,
-		uint16(math.Exp2(16) - 1), uint16(math.Exp2(16) - 1), uint16(math.Exp2(16) - 1),
-		0, 0, 0,
-		[3]byte{},
+func NewPixelFormat(bpp uint8) PixelFormat {
+	rgbMax := uint16(math.Exp2(float64(bpp))) - 1
+	var (
+		tc         uint8 = RFBTrue
+		rs, gs, bs uint8
+	)
+	switch bpp {
+	case 8:
+		tc = RFBFalse
+		rs, gs, bs = 0, 0, 0
+	case 16:
+		rs, gs, bs = 0, 4, 8
+	case 32:
+		rs, gs, bs = 0, 8, 16
 	}
+	return PixelFormat{bpp, bpp, RFBTrue, tc, rgbMax, rgbMax, rgbMax, rs, gs, bs, [3]byte{}}
 }
 
-// Bytes returns a slice of the contents of the PixelFormat structure. If there
-// is an error creating the slice, an error will be returned.
-func (pf PixelFormat) Bytes() ([]byte, error) {
-	var buf bytes.Buffer
+// Len returns the length of a PixelFormat struct.
+func (pf PixelFormat) Len() int {
+	return 16
+}
 
+// Marshal implements the Marshaler interface.
+func (pf PixelFormat) Marshal() ([]byte, error) {
 	// Validation checks.
 	switch pf.BPP {
 	case 8, 16, 32:
@@ -53,24 +69,42 @@ func (pf PixelFormat) Bytes() ([]byte, error) {
 	}
 
 	// Create the slice of bytes
-	if err := binary.Write(&buf, binary.BigEndian, pf); err != nil {
+	buf := NewBuffer(nil)
+	if err := buf.Write(&pf); err != nil {
 		return nil, err
 	}
 
-	// Padding values automatically set to 0 during slice conversion.
 	return buf.Bytes(), nil
 }
 
-// Write populates the PixelFormat structure with data from the io.Reader. Any
-// error encountered will be returned.
-func (pf *PixelFormat) Write(r io.Reader) error {
-	if err := binary.Read(r, binary.BigEndian, pf); err != nil {
+// Read reads from an io.Reader, and populates the PixelFormat.
+func (pf *PixelFormat) Read(r io.Reader) error {
+	buf := make([]byte, pf.Len())
+	if _, err := io.ReadAtLeast(r, buf, len(buf)); err != nil {
 		return err
 	}
+	return pf.Unmarshal(buf)
+}
 
-	if pf.TrueColor != RFBFalse {
-		pf.TrueColor = RFBTrue // Convert all non-zero values to our constant value.
+// Unmarshal implements the Unmarshaler interface.
+func (pf *PixelFormat) Unmarshal(data []byte) error {
+	buf := NewBuffer(data)
+
+	var msg PixelFormat
+	if err := buf.Read(&msg); err != nil {
+		return err
 	}
+	if msg.TrueColor != RFBFalse {
+		msg.TrueColor = RFBTrue // Convert all non-zero values to our constant value.
+	}
+	*pf = msg
 
 	return nil
+}
+
+func (pf PixelFormat) order() binary.ByteOrder {
+	if pf.BigEndian == RFBTrue {
+		return binary.BigEndian
+	}
+	return binary.LittleEndian
 }

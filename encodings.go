@@ -3,8 +3,8 @@
 package vnc
 
 import (
-	"encoding/binary"
-	"log"
+	"bytes"
+	"fmt"
 )
 
 const (
@@ -28,6 +28,23 @@ type Encoding interface {
 	// This should return a new Encoding implementation that contains
 	// the proper data.
 	Read(*ClientConn, *Rectangle) (Encoding, error)
+
+	// Marshal implements the Marshaler interface.
+	Marshal() ([]byte, error)
+}
+
+type Encodings []Encoding
+
+func (e Encodings) Marshal() ([]byte, error) {
+	buf := NewBuffer(nil)
+
+	for _, enc := range e {
+		if err := buf.Write(enc.Type()); err != nil {
+			return nil, err
+		}
+	}
+
+	return buf.Bytes(), nil
 }
 
 // RawEncoding is raw pixel data sent by the server.
@@ -36,56 +53,50 @@ type RawEncoding struct {
 	Colors []Color
 }
 
-// NewRawEncoding returns a new RawEncoding.
-func NewRawEncoding(c []Color) *RawEncoding {
-	return &RawEncoding{c}
-}
-
 func (*RawEncoding) Type() int32 {
 	return Raw
 }
 
+func (e *RawEncoding) Marshal() ([]byte, error) {
+	buf := NewBuffer(nil)
+
+	for _, c := range e.Colors {
+		bytes, err := c.Marshal()
+		if err != nil {
+			return nil, err
+		}
+		buf.WriteBytes(bytes)
+	}
+
+	return buf.Bytes(), nil
+}
+
 func (*RawEncoding) Read(c *ClientConn, rect *Rectangle) (Encoding, error) {
-	if c.debug {
-		log.Printf("RawEncoding.Read(): %v", rect)
-	}
-	bytesPerPixel := c.pixelFormat.BPP / 8
-	pixelBytes := make([]uint8, bytesPerPixel)
+	// if c.debug {
+	// 	log.Println("RawEncoding.Read()")
+	// 	rect.DebugPrint()
+	// }
 
-	var byteOrder binary.ByteOrder = binary.LittleEndian
-	if c.pixelFormat.BigEndian == RFBTrue {
-		byteOrder = binary.BigEndian
+	var buf bytes.Buffer
+
+	bytesPerPixel := int(c.pixelFormat.BPP / 8)
+	n := rect.Area() * bytesPerPixel
+	if err := c.receiveN(&buf, n); err != nil {
+		return nil, fmt.Errorf("unable to read rectangle with raw encoding: %v", err)
 	}
 
-	colors := make([]Color, int(rect.Height)*int(rect.Width))
+	colors := make([]Color, rect.Area())
 	for y := uint16(0); y < rect.Height; y++ {
 		for x := uint16(0); x < rect.Width; x++ {
-			//if _, err := io.ReadFull(r, pixelBytes); err != nil {
-			if err := c.receive(pixelBytes); err != nil {
+			color := NewColor(&c.pixelFormat, &c.colorMap)
+			if err := color.Unmarshal(buf.Next(bytesPerPixel)); err != nil {
 				return nil, err
 			}
-
-			var rawPixel uint32
-			if c.pixelFormat.BPP == 8 {
-				rawPixel = uint32(pixelBytes[0])
-			} else if c.pixelFormat.BPP == 16 {
-				rawPixel = uint32(byteOrder.Uint16(pixelBytes))
-			} else if c.pixelFormat.BPP == 32 {
-				rawPixel = byteOrder.Uint32(pixelBytes)
-			}
-
-			color := &colors[int(y)*int(rect.Width)+int(x)]
-			if c.pixelFormat.TrueColor == RFBTrue {
-				color.R = uint16((rawPixel >> c.pixelFormat.RedShift) & uint32(c.pixelFormat.RedMax))
-				color.G = uint16((rawPixel >> c.pixelFormat.GreenShift) & uint32(c.pixelFormat.GreenMax))
-				color.B = uint16((rawPixel >> c.pixelFormat.BlueShift) & uint32(c.pixelFormat.BlueMax))
-			} else {
-				*color = c.colorMap[rawPixel]
-			}
+			colors[int(y)*int(rect.Width)+int(x)] = *color
 		}
 	}
 
-	return NewRawEncoding(colors), nil
+	return &RawEncoding{colors}, nil
 }
 
 // DesktopSizePseudoEncoding enables desktop resize support.
@@ -101,4 +112,8 @@ func (*DesktopSizePseudoEncoding) Read(c *ClientConn, rect *Rectangle) (Encoding
 	c.fbHeight = rect.Height
 
 	return &DesktopSizePseudoEncoding{}, nil
+}
+
+func (e *DesktopSizePseudoEncoding) Marshal() ([]byte, error) {
+	return []byte{}, nil
 }

@@ -8,7 +8,7 @@ import (
 	"github.com/kward/go-vnc/go/operators"
 )
 
-func TestPixelFormatBytes(t *testing.T) {
+func TestPixelFormat_Marshal(t *testing.T) {
 	tests := []struct {
 		pf PixelFormat
 		b  []byte
@@ -21,8 +21,8 @@ func TestPixelFormatBytes(t *testing.T) {
 			[]uint8{8, 8, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, true},
 		{PixelFormat{BPP: 8, Depth: 16, BigEndian: RFBTrue, TrueColor: RFBFalse},
 			[]uint8{8, 16, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0}, true},
-		{NewPixelFormat(),
-			[]uint8{16, 16, 1, 1, 255, 255, 255, 255, 255, 255, 0, 0, 0, 0, 0, 0}, true},
+		{NewPixelFormat(16),
+			[]uint8{16, 16, 1, 1, 255, 255, 255, 255, 255, 255, 0, 4, 8, 0, 0, 0}, true},
 		//
 		// Invalid PixelFormats.
 		//
@@ -39,7 +39,7 @@ func TestPixelFormatBytes(t *testing.T) {
 
 	for _, tt := range tests {
 		pf := tt.pf
-		b, err := pf.Bytes()
+		b, err := pf.Marshal()
 		if err == nil && !tt.ok {
 			t.Error("expected error")
 		}
@@ -57,7 +57,7 @@ func TestPixelFormatBytes(t *testing.T) {
 	}
 }
 
-func TestPixelFormatWrite(t *testing.T) {
+func TestPixelFormat_Unmarshal(t *testing.T) {
 	tests := []struct {
 		b  []byte
 		pf PixelFormat
@@ -67,12 +67,20 @@ func TestPixelFormatWrite(t *testing.T) {
 		// Valid PixelFormats.
 		//
 		{[]uint8{8, 8, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			PixelFormat{BPP: 8, Depth: 8, BigEndian: RFBTrue, TrueColor: RFBFalse}, true},
-		{[]uint8{8, 16, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			PixelFormat{BPP: 8, Depth: 16, BigEndian: RFBTrue, TrueColor: RFBFalse}, true},
+			PixelFormat{BPP: 8, Depth: 8, BigEndian: RFBTrue, TrueColor: RFBFalse},
+			true},
+		{[]uint8{8, 16, 1, 1, 255, 255, 255, 255, 255, 255, 0, 4, 8, 0, 0, 0},
+			PixelFormat{
+				BPP: 8, Depth: 16,
+				BigEndian: RFBTrue, TrueColor: RFBTrue,
+				RedMax: 65535, GreenMax: 65535, BlueMax: 65535,
+				RedShift: 0, GreenShift: 4, BlueShift: 8},
+			true},
+		{[]uint8{16, 16, 1, 1, 255, 255, 255, 255, 255, 255, 0, 4, 8, 0, 0, 0},
+			NewPixelFormat(16), true},
 		{[]uint8{32, 32, 1, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0},
-			PixelFormat{BPP: 32, Depth: 32, BigEndian: RFBTrue, TrueColor: RFBFalse}, true},
-		//
+			PixelFormat{BPP: 32, Depth: 32, BigEndian: RFBTrue, TrueColor: RFBFalse},
+			true},
 		//
 		// Invalid PixelFormats.
 		//
@@ -83,7 +91,7 @@ func TestPixelFormatWrite(t *testing.T) {
 		buf.Write(tt.b)
 
 		var pf PixelFormat
-		err := pf.Write(&buf)
+		err := pf.Unmarshal(buf.Bytes())
 		if err == nil && !tt.ok {
 			t.Error("expected error")
 		}
@@ -101,14 +109,14 @@ func TestPixelFormatWrite(t *testing.T) {
 	}
 }
 
-func equalPixelFormat(got, want PixelFormat) bool {
-	gotBytes, err := got.Bytes()
+func equalPixelFormat(g, w PixelFormat) bool {
+	got, err := g.Marshal()
 	if err != nil {
 		return false
 	}
-	wantBytes, err := want.Bytes()
+	want, err := w.Marshal()
 	if err != nil {
 		return false
 	}
-	return operators.EqualSlicesOfByte(gotBytes, wantBytes)
+	return operators.EqualSlicesOfByte(got, want)
 }

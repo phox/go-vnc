@@ -1,6 +1,9 @@
 package vnc
 
-import "testing"
+import (
+	"io"
+	"testing"
+)
 
 func TestClientInit(t *testing.T) {
 	tests := []struct {
@@ -12,24 +15,30 @@ func TestClientInit(t *testing.T) {
 	}
 
 	mockConn := &MockConn{}
-	conn := &ClientConn{
-		c:      mockConn,
-		config: &ClientConfig{},
-	}
+	conn := NewClientConn(mockConn, &ClientConfig{})
 
 	for _, tt := range tests {
 		mockConn.Reset()
-		conn.config.Exclusive = tt.exclusive
 
-		// Validate client response.
-		err := conn.clientInit()
-		if err != nil {
-			t.Fatalf("clientInit() unexpected error %v", err)
+		// Send client initialization.
+		conn.config.Exclusive = tt.exclusive
+		if err := conn.clientInit(); err != nil {
+			t.Fatalf("unexpected error: %v", err)
 		}
+
+		// Validate server reception.
 		var shared uint8
-		err = conn.receive(&shared)
-		if shared != tt.shared {
-			t.Errorf("clientInit() shared: got = %v, want = %v", shared, tt.shared)
+		if err := conn.receive(&shared); err != nil {
+			t.Fatal("error receiving client init: %v", err)
+		}
+		if got, want := shared, tt.shared; got != want {
+			t.Errorf("incorrect shared-flag: got = %v, want = %v", got, want)
+		}
+
+		// Ensure nothing extra was sent by client.
+		var buf []byte
+		if err := conn.receiveN(&buf, 1024); err != io.EOF {
+			t.Errorf("expected EOF; got = %v", err)
 		}
 	}
 }
@@ -49,21 +58,18 @@ func TestServerInit(t *testing.T) {
 		desktopName       string
 	}{
 		// Valid protocol.
-		{dn, 100, 200, NewPixelFormat(), "foo"},
+		{dn, 100, 200, NewPixelFormat(16), "foo"},
 		// Invalid protocol (missing fields).
 		{eof: none},
 		{eof: fbw, fbWidth: 1},
 		{eof: fbh, fbWidth: 2, fbHeight: 1},
-		{eof: pf, fbWidth: 3, fbHeight: 2, pixelFormat: NewPixelFormat()},
+		{eof: pf, fbWidth: 3, fbHeight: 2, pixelFormat: NewPixelFormat(16)},
 	}
 
 	mockConn := &MockConn{}
-	conn := &ClientConn{
-		c:      mockConn,
-		config: &ClientConfig{},
-	}
+	conn := NewClientConn(mockConn, &ClientConfig{})
 
-	for _, tt := range tests {
+	for i, tt := range tests {
 		mockConn.Reset()
 		if tt.eof >= fbw {
 			if err := conn.send(tt.fbWidth); err != nil {
@@ -76,7 +82,10 @@ func TestServerInit(t *testing.T) {
 			}
 		}
 		if tt.eof >= pf {
-			pfBytes, _ := tt.pixelFormat.Bytes()
+			pfBytes, err := tt.pixelFormat.Marshal()
+			if err != nil {
+				t.Fatal(err)
+			}
 			if err := conn.send(pfBytes); err != nil {
 				t.Fatal(err)
 			}
@@ -93,26 +102,26 @@ func TestServerInit(t *testing.T) {
 		// Validate server message handling.
 		err := conn.serverInit()
 		if tt.eof < dn && err == nil {
-			t.Fatalf("serverInit() expected error")
+			t.Fatalf("%v: expected error", i)
 		}
 		if tt.eof < dn {
 			// The protocol was incomplete; no point in checking values.
 			continue
 		}
 		if err != nil {
-			t.Fatalf("serverInit() error %v", err)
+			t.Fatalf("%v: unexpected error %v", i, err)
 		}
 		if conn.fbWidth != tt.fbWidth {
-			t.Errorf("serverInit() FramebufferWidth: got = %v, want = %v", conn.fbWidth, tt.fbWidth)
+			t.Errorf("FramebufferWidth: got = %v, want = %v", conn.fbWidth, tt.fbWidth)
 		}
 		if conn.fbHeight != tt.fbHeight {
-			t.Errorf("serverInit() FramebufferHeight: got = %v, want = %v", conn.fbHeight, tt.fbHeight)
+			t.Errorf("FramebufferHeight: got = %v, want = %v", conn.fbHeight, tt.fbHeight)
 		}
 		if !equalPixelFormat(conn.pixelFormat, tt.pixelFormat) {
-			t.Errorf("serverInit() PixelFormat: got = %v, want = %v", conn.pixelFormat, tt.pixelFormat)
+			t.Errorf("PixelFormat: got = %v, want = %v", conn.pixelFormat, tt.pixelFormat)
 		}
 		if conn.DesktopName() != tt.desktopName {
-			t.Errorf("serverInit() DesktopName: got = %v, want = %v", conn.DesktopName(), tt.desktopName)
+			t.Errorf("DesktopName: got = %v, want = %v", conn.DesktopName(), tt.desktopName)
 		}
 	}
 }
