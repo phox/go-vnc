@@ -260,7 +260,7 @@ func (c *ClientConn) receive(data interface{}) error {
 // receiveN receives N packets from the network.
 func (c *ClientConn) receiveN(data interface{}, n int) error {
 	if n == 0 {
-		log.Println("receiveN requested no data")
+		log.Println("warn: receiveN requested no data")
 		return nil
 	}
 
