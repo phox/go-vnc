@@ -220,15 +220,15 @@ func (c *ClientConn) ListenAndHandle() error {
 			log.Print("error: reading from server")
 			break
 		}
+		if c.debug {
+			log.Printf("message-type: %v", messageType)
+		}
 
 		msg, ok := serverMessages[messageType]
 		if !ok {
 			// Unsupported message type! Bad!
 			log.Printf("error unsupported message-type: %v", messageType)
 			break
-		}
-		if c.debug {
-			log.Printf("message-type: %v", messageType)
 		}
 
 		parsedMsg, err := msg.Read(c)
