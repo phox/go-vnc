@@ -356,3 +356,10 @@ func (c *ClientConn) processContext(ctx context.Context) error {
 
 	return nil
 }
+
+func (c *ClientConn) DebugMetrics() {
+	log.Println("Metrics:")
+	for name, metric := range c.metrics {
+		log.Printf("  %v: %v", name, metric.Value())
+	}
+}
