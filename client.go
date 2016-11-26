@@ -251,7 +251,7 @@ func (c *ClientConn) ClientCutText(text string) error {
 // Latin 1 (byte 3 = 0)
 // ISO/IEC 8859-1 = Unicode U+0020..U+00FF
 const (
-	KeySpace = iota + 0x0020
+	KeySpace uint32 = iota + 0x0020
 	KeyExclam
 	KeyQuoteDbl
 	KeyNumberSign
@@ -348,7 +348,7 @@ const (
 	KeyAsciiTilde
 )
 const (
-	KeyBackspace = iota + 0xff08
+	KeyBackspace uint32 = iota + 0xff08
 	KeyTab
 	KeyLinefeed
 	KeyClear
@@ -356,13 +356,13 @@ const (
 	KeyReturn
 )
 const (
-	KeyPause      = 0xff13
-	KeyScrollLock = 0xff14
-	KeySysReq     = 0xff15
-	KeyEscape     = 0xff1b
+	KeyPause      uint32 = 0xff13
+	KeyScrollLock uint32 = 0xff14
+	KeySysReq     uint32 = 0xff15
+	KeyEscape     uint32 = 0xff1b
 )
 const (
-	KeyHome = iota + 0xff50
+	KeyHome uint32 = iota + 0xff50
 	KeyLeft
 	KeyUp
 	KeyRight
@@ -370,10 +370,10 @@ const (
 	KeyPageUp
 	KeyPageDown
 	KeyEnd
-	KeyInsert = 0xff63
+	KeyInsert uint32 = 0xff63
 )
 const (
-	KeyF1 = iota + 0xffbe
+	KeyF1 uint32 = iota + 0xffbe
 	KeyF2
 	KeyF3
 	KeyF4
@@ -387,7 +387,7 @@ const (
 	KeyF12
 )
 const (
-	KeyShiftLeft = iota + 0xffe1
+	KeyShiftLeft uint32 = iota + 0xffe1
 	KeyShiftRight
 	KeyControlLeft
 	KeyControlRight
@@ -397,5 +397,5 @@ const (
 	_
 	KeyAltLeft
 	KeyAltRight
-	KeyDelete = 0xffff
+	KeyDelete uint32 = 0xffff
 )
