@@ -1,12 +1,41 @@
 package keys
 
+import "fmt"
+
+// Key represents a VNC key press.
 type Key uint32
+
+// Keys is a slice of Key values.
+type Keys []Key
+
+var keymap = map[rune]Key{
+	'-': Minus,
+	'0': Digit0,
+	'1': Digit1,
+	'2': Digit2,
+	'3': Digit3,
+	'4': Digit4,
+	'5': Digit5,
+	'6': Digit6,
+	'7': Digit7,
+	'8': Digit8,
+	'9': Digit9,
+}
+
+// IntToKeys returns Keys that represent the key presses required to type an int.
+func IntToKeys(v int) Keys {
+	k := Keys{}
+	for _, c := range fmt.Sprintf("%d", v) {
+		k = append(k, keymap[c])
+	}
+	return k
+}
 
 // Latin 1 (byte 3 = 0)
 // ISO/IEC 8859-1 = Unicode U+0020..U+00FF
 const (
-	Space  Key = iota + 0x0020
-	Exclam     // exclamation mark
+	Space   Key = iota + 0x0020
+	Exclaim     // exclamation mark
 	QuoteDbl
 	NumberSign
 	Dollar
