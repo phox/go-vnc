@@ -7,6 +7,9 @@ import (
 	"log"
 	"strings"
 	"unicode"
+
+	"github.com/kward/go-vnc/buttons"
+	"github.com/kward/go-vnc/keys"
 )
 
 const (
@@ -120,10 +123,10 @@ func (c *ClientConn) FramebufferUpdateRequest(inc uint8, x, y, w, h uint16) erro
 
 // KeyEventMessage holds the wire format message.
 type KeyEventMessage struct {
-	Msg      uint8   // message-type
-	DownFlag uint8   // down-flag
-	_        [2]byte // padding
-	Key      uint32  // key
+	Msg      uint8    // message-type
+	DownFlag uint8    // down-flag
+	_        [2]byte  // padding
+	Key      keys.Key // key
 }
 
 const (
@@ -137,17 +140,16 @@ const (
 // you must send a key with both a down event, and a non-down event.
 //
 // See RFC 6143 Section 7.5.4.
-func (c *ClientConn) KeyEvent(keysym uint32, down bool) error {
+func (c *ClientConn) KeyEvent(key keys.Key, down bool) error {
 	if c.debug {
-		log.Printf("KeyEvent(0x%04x, %v)", keysym, down)
+		log.Printf("KeyEvent(0x%04x, %v)", key, down)
 	}
 
-	var downFlag uint8 = RFBFalse
+	downFlag := RFBFalse
 	if down {
 		downFlag = RFBTrue
 	}
-
-	msg := KeyEventMessage{keyEventMsg, downFlag, [2]byte{}, keysym}
+	msg := KeyEventMessage{keyEventMsg, downFlag, [2]byte{}, key}
 	if err := c.send(msg); err != nil {
 		return err
 	}
@@ -155,22 +157,6 @@ func (c *ClientConn) KeyEvent(keysym uint32, down bool) error {
 	settleUI()
 	return nil
 }
-
-// ButtonMask represents a mask of pointer presses/releases.
-type ButtonMask uint8
-
-// All available button mask components.
-const (
-	ButtonLeft ButtonMask = 1 << iota
-	ButtonMiddle
-	ButtonRight
-	Button4
-	Button5
-	Button6
-	Button7
-	Button8
-	ButtonNone = ButtonMask(0)
-)
 
 // PointerEventMessage holds the wire format message.
 type PointerEventMessage struct {
@@ -182,16 +168,16 @@ type PointerEventMessage struct {
 // PointerEvent indicates that pointer movement or a pointer button
 // press or release.
 //
-// The mask is a bitwise mask of various ButtonMask values. When a button
+// The `button` is a bitwise mask of various Button values. When a button
 // is set, it is pressed, when it is unset, it is released.
 //
 // See RFC 6143 Section 7.5.5
-func (c *ClientConn) PointerEvent(mask ButtonMask, x, y uint16) error {
+func (c *ClientConn) PointerEvent(button buttons.Button, x, y uint16) error {
 	if c.debug {
-		log.Printf("PointerEvent(%08b, %v, %v)", mask, x, y)
+		log.Printf("PointerEvent(%08b, %v, %v)", button, x, y)
 	}
 
-	msg := PointerEventMessage{pointerEventMsg, uint8(mask), x, y}
+	msg := PointerEventMessage{pointerEventMsg, uint8(button), x, y}
 	if err := c.send(msg); err != nil {
 		return err
 	}
@@ -243,159 +229,3 @@ func (c *ClientConn) ClientCutText(text string) error {
 	settleUI()
 	return nil
 }
-
-//
-// Constants to use for KeyEvents PointerEvents.
-//
-
-// Latin 1 (byte 3 = 0)
-// ISO/IEC 8859-1 = Unicode U+0020..U+00FF
-const (
-	KeySpace uint32 = iota + 0x0020
-	KeyExclam
-	KeyQuoteDbl
-	KeyNumberSign
-	KeyDollar
-	KeyPercent
-	KeyAmpersand
-	KeyApostrophe
-	KeyParenLeft
-	KeyParenRight
-	KeyAsterisk
-	KeyPlus
-	KeyComma
-	KeyMinus
-	KeyPeriod
-	KeySlash
-	Key0
-	Key1
-	Key2
-	Key3
-	Key4
-	Key5
-	Key6
-	Key7
-	Key8
-	Key9
-	KeyColon
-	KeySemicolon
-	KeyLess
-	KeyEqual
-	KeyGreater
-	KeyQuestion
-	KeyAt
-	KeyA
-	KeyB
-	KeyC
-	KeyD
-	KeyE
-	KeyF
-	KeyG
-	KeyH
-	KeyI
-	KeyJ
-	KeyK
-	KeyL
-	KeyM
-	KeyN
-	KeyO
-	KeyP
-	KeyQ
-	KeyR
-	KeyS
-	KeyT
-	KeyU
-	KeyV
-	KeyW
-	KeyX
-	KeyY
-	KeyZ
-	KeyBracketLeft
-	KeyBackslash
-	KeyBracketRight
-	KeyAsciiCircum
-	KeyUnderscore
-	KeyGrave
-	Keya
-	Keyb
-	Keyc
-	Keyd
-	Keye
-	Keyf
-	Keyg
-	Keyh
-	Keyi
-	Keyj
-	Keyk
-	Keyl
-	Keym
-	Keyn
-	Keyo
-	Keyp
-	Keyq
-	Keyr
-	Keys
-	Keyt
-	Keyu
-	Keyv
-	Keyw
-	Keyx
-	Keyy
-	Keyz
-	KeyBraceLeft
-	KeyBar
-	KeyBraceRight
-	KeyAsciiTilde
-)
-const (
-	KeyBackspace uint32 = iota + 0xff08
-	KeyTab
-	KeyLinefeed
-	KeyClear
-	_
-	KeyReturn
-)
-const (
-	KeyPause      uint32 = 0xff13
-	KeyScrollLock uint32 = 0xff14
-	KeySysReq     uint32 = 0xff15
-	KeyEscape     uint32 = 0xff1b
-)
-const (
-	KeyHome uint32 = iota + 0xff50
-	KeyLeft
-	KeyUp
-	KeyRight
-	KeyDown
-	KeyPageUp
-	KeyPageDown
-	KeyEnd
-	KeyInsert uint32 = 0xff63
-)
-const (
-	KeyF1 uint32 = iota + 0xffbe
-	KeyF2
-	KeyF3
-	KeyF4
-	KeyF5
-	KeyF6
-	KeyF7
-	KeyF8
-	KeyF9
-	KeyF10
-	KeyF11
-	KeyF12
-)
-const (
-	KeyShiftLeft uint32 = iota + 0xffe1
-	KeyShiftRight
-	KeyControlLeft
-	KeyControlRight
-	KeyCapsLock
-	_
-	_
-	_
-	KeyAltLeft
-	KeyAltRight
-	KeyDelete uint32 = 0xffff
-)

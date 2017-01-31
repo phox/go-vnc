@@ -8,7 +8,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/kward/go-vnc/buttons"
 	"github.com/kward/go-vnc/go/operators"
+	"github.com/kward/go-vnc/keys"
 	"golang.org/x/net/context"
 )
 
@@ -189,8 +191,8 @@ func ExampleClientConn_KeyEvent() {
 	}
 
 	// Press and release the return key.
-	vc.KeyEvent(KeyReturn, true)
-	vc.KeyEvent(KeyReturn, false)
+	vc.KeyEvent(keys.Return, true)
+	vc.KeyEvent(keys.Return, false)
 
 	// Close VNC connection.
 	vc.Close()
@@ -198,11 +200,11 @@ func ExampleClientConn_KeyEvent() {
 
 func TestKeyEvent(t *testing.T) {
 	tests := []struct {
-		key  uint32
+		key  keys.Key
 		down bool
 	}{
-		{Key0, PressKey},
-		{Key1, ReleaseKey},
+		{keys.Digit0, PressKey},
+		{keys.Digit1, ReleaseKey},
 	}
 
 	mockConn := &MockConn{}
@@ -261,11 +263,11 @@ func ExampleClientConn_PointerEvent() {
 
 	// Move mouse to x=100, y=200.
 	x, y := uint16(100), uint16(200)
-	vc.PointerEvent(ButtonNone, x, y)
+	vc.PointerEvent(buttons.None, x, y)
 
 	// Click and release the left mouse button.
-	vc.PointerEvent(ButtonLeft, x, y)
-	vc.PointerEvent(ButtonNone, x, y)
+	vc.PointerEvent(buttons.Left, x, y)
+	vc.PointerEvent(buttons.None, x, y)
 
 	// Close connection.
 	vc.Close()
@@ -273,11 +275,11 @@ func ExampleClientConn_PointerEvent() {
 
 func TestPointerEvent(t *testing.T) {
 	tests := []struct {
-		mask ButtonMask
-		x, y uint16
+		button buttons.Button
+		x, y   uint16
 	}{
-		{ButtonNone, 0, 0},
-		{ButtonLeft | ButtonRight, 123, 456},
+		{buttons.None, 0, 0},
+		{buttons.Left | buttons.Right, 123, 456},
 	}
 
 	mockConn := &MockConn{}
@@ -288,7 +290,7 @@ func TestPointerEvent(t *testing.T) {
 		mockConn.Reset()
 
 		// Send request.
-		err := conn.PointerEvent(tt.mask, tt.x, tt.y)
+		err := conn.PointerEvent(tt.button, tt.x, tt.y)
 		if err != nil {
 			t.Errorf("unexpected error: %v", err)
 			continue
@@ -305,7 +307,7 @@ func TestPointerEvent(t *testing.T) {
 		if got, want := req.Msg, pointerEventMsg; got != want {
 			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
 		}
-		if got, want := req.Mask, uint8(tt.mask); got != want {
+		if got, want := req.Mask, buttons.Mask(tt.button); got != want {
 			t.Errorf("incorrect button-mask; got = %v, want = %v", got, want)
 		}
 		if got, want := req.X, tt.x; got != want {
