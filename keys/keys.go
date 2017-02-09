@@ -1,9 +1,12 @@
+// Package keys provides constants for all the keyboard inputs.
 package keys
 
 import "fmt"
 
 // Key represents a VNC key press.
 type Key uint32
+
+//go:generate stringer -type=Key
 
 // Keys is a slice of Key values.
 type Keys []Key

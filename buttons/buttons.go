@@ -1,7 +1,10 @@
+// Package buttons describes the supported button masks.
 package buttons
 
 // Button represents a mask of pointer presses/releases.
 type Button uint8
+
+//go:generate stringer -type=Button
 
 // All available button mask components.
 const (
