@@ -52,17 +52,17 @@ func (r *Rectangle) Read(c *ClientConn) error {
 	}
 	r.X, r.Y, r.Width, r.Height = msg.X, msg.Y, msg.W, msg.H
 
-	enc, ok := r.encodable(msg.E)
+	encImpl, ok := r.encodable(msg.E)
 	if !ok {
-		return fmt.Errorf("unsupported encoding type: %v", msg.E)
+		return fmt.Errorf("unsupported encoding type: %s", msg.E)
 	}
 
-	var err error
-	r.Enc, err = enc.Read(c, r)
+	enc, err := encImpl.Read(c, r)
 	if err != nil {
-		return fmt.Errorf("error reading rectangle encoding: %v", err)
+		return fmt.Errorf("error reading rectangle encoding: %s", err)
 	}
 
+	r.Enc = enc
 	return nil
 }
 
@@ -105,8 +105,8 @@ func (r *Rectangle) Unmarshal(data []byte) error {
 
 func (r *Rectangle) Area() int { return int(r.Width) * int(r.Height) }
 
-func (r *Rectangle) DebugPrint() {
-	log.Printf("Rectangle: x: %v y: %v, w: %v, h: %v, enc: %v", r.X, r.Y, r.Width, r.Height, r.Enc)
+func (r *Rectangle) String() string {
+	return fmt.Sprintf("< x: %d y: %d, w: %d, h: %d, enc: %v >", r.X, r.Y, r.Width, r.Height, r.Enc)
 }
 
 type EncodableFunc func(enc int32) (Encoding, bool)
