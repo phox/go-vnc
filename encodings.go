@@ -73,8 +73,7 @@ func (e *RawEncoding) Marshal() ([]byte, error) {
 
 func (*RawEncoding) Read(c *ClientConn, rect *Rectangle) (Encoding, error) {
 	// if c.debug {
-	// 	log.Println("RawEncoding.Read()")
-	// 	rect.DebugPrint()
+	// 	log.Printf("RawEncoding.Read(): %s", rect)
 	// }
 
 	var buf bytes.Buffer
@@ -82,7 +81,7 @@ func (*RawEncoding) Read(c *ClientConn, rect *Rectangle) (Encoding, error) {
 	bytesPerPixel := int(c.pixelFormat.BPP / 8)
 	n := rect.Area() * bytesPerPixel
 	if err := c.receiveN(&buf, n); err != nil {
-		return nil, fmt.Errorf("unable to read rectangle with raw encoding: %v", err)
+		return nil, fmt.Errorf("unable to read rectangle with raw encoding: %s", err)
 	}
 
 	colors := make([]Color, rect.Area())
