@@ -132,9 +132,9 @@ const (
 )
 
 // KeyEvent indicates a key press or release and sends it to the server.
-// The key is indicated using the X Window System "keysym" value. Use
-// Google to find a reference of these values. To simulate a key press,
-// you must send a key with both a down event, and a non-down event.
+// The key is indicated using the X Window System "keysym" value. Constants are
+// provided in `keys/keys.go`. To simulate a key press, you must send a key with
+// both a true and false down event.
 //
 // See RFC 6143 Section 7.5.4.
 func (c *ClientConn) KeyEvent(key keys.Key, down bool) error {
