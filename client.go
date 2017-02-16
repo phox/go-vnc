@@ -115,10 +115,7 @@ type FramebufferUpdateRequestMessage struct {
 // See RFC 6143 Section 7.5.3
 func (c *ClientConn) FramebufferUpdateRequest(inc uint8, x, y, w, h uint16) error {
 	msg := FramebufferUpdateRequestMessage{framebufferUpdateRequestMsg, inc, x, y, w, h}
-	if err := c.send(&msg); err != nil {
-		return err
-	}
-	return nil
+	return c.send(&msg)
 }
 
 // KeyEventMessage holds the wire format message.
