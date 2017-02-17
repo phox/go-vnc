@@ -90,7 +90,9 @@ func (c *ClientConn) SetEncodings(encs Encodings) error {
 	if err != nil {
 		return err
 	}
-	buf.WriteBytes(bytes)
+	if err := buf.Write(bytes); err != nil {
+		return err
+	}
 
 	// Send message.
 	if err := c.send(buf.Bytes()); err != nil {

@@ -65,7 +65,9 @@ func (e *RawEncoding) Marshal() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		buf.WriteBytes(bytes)
+		if err := buf.Write(bytes); err != nil {
+			return nil, err
+		}
 	}
 
 	return buf.Bytes(), nil

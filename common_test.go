@@ -58,16 +58,6 @@ func TestBuffer_Write(t *testing.T) {
 	}
 }
 
-func TestBuffer_WriteBytes(t *testing.T) {
-	var buf *Buffer
-
-	buf = NewBuffer(nil)
-	buf.WriteBytes([]byte{1, 2, 3, 4, 5})
-	if got, want := buf.Bytes(), []byte{1, 2, 3, 4, 5}; !operators.EqualSlicesOfByte(got, want) {
-		t.Errorf("incorrect result; got = %v, want = %v", got, want)
-	}
-}
-
 // MockConn implements the net.Conn interface.
 type MockConn struct {
 	b bytes.Buffer

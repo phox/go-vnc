@@ -65,15 +65,8 @@ func (b *Buffer) Write(data interface{}) error {
 	return binary.Write(b.buf, binary.BigEndian, data)
 }
 
-func (b *Buffer) WriteByte(c byte) {
-	b.buf.WriteByte(c)
-	return
-}
-
-func (b *Buffer) WriteBytes(p []byte) {
-	for _, c := range p {
-		b.WriteByte(c)
-	}
+func (b *Buffer) WriteByte(c byte) error {
+	return b.buf.WriteByte(c)
 }
 
 // type rfbMessage interface {

@@ -80,7 +80,9 @@ func (r *Rectangle) Marshal() ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	buf.WriteBytes(bytes)
+	if err := buf.Write(bytes); err != nil {
+		return nil, err
+	}
 
 	return buf.Bytes(), nil
 }
@@ -198,7 +200,7 @@ func (m *FramebufferUpdate) Marshal() ([]byte, error) {
 		if err != nil {
 			return nil, err
 		}
-		buf.WriteBytes(bytes)
+		buf.Write(bytes)
 	}
 
 	return buf.Bytes(), nil
