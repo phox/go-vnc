@@ -72,7 +72,7 @@ func TestFramebufferUpdate(t *testing.T) {
 		mockConn.Reset()
 
 		// Send the message.
-		msg := NewFramebufferUpdate(tt.rects)
+		msg := newFramebufferUpdate(tt.rects)
 		bytes, err := msg.Marshal()
 		if err != nil {
 			t.Fatal(err)

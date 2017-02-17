@@ -19,7 +19,3 @@ const (
 	ColorPseudo       Encoding = -239
 	DesktopSizePseudo Encoding = -223
 )
-
-func (e Encoding) ToInt32() int32 {
-	return int32(e)
-}

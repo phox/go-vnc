@@ -69,28 +69,10 @@ func (b *Buffer) WriteByte(c byte) error {
 	return b.buf.WriteByte(c)
 }
 
-// Marshaler is the interface for objects that can marshal themselves.
+// Marshaler is the interface satisfied for un-/marshaling.
 type Marshaler interface {
+	// Marshal returns the wire encoding of the ServerMessage.
 	Marshal() ([]byte, error)
+	// Unmarshal parses a wire format message into a ServerMessage.
+	Unmarshal(data []byte) error
 }
-
-// func Marshal(msg rfbMessage) ([]byte, error) {
-// 	// Can the object marshal itself?
-// 	if m, ok := msg.(Marshaler); ok {
-// 		return m.Marshal()
-// 	}
-// 	return []byte{}, fmt.Errorf("Message %v unable to marshal itself.", msg)
-// }
-
-// Unmarshaler is the interface for objects that can marshal themselves.
-type Unmarshaler interface {
-	Unmarshal([]byte) error
-}
-
-// func Unmarshal(buf []byte, msg rfbMessage) error {
-// 	// Can the object unmarshal itslef?
-// 	if m, ok := msg.(Unmarshaler); ok {
-// 		return m.Unmarshal(buf)
-// 	}
-// 	return fmt.Errorf("Message %v unable to unmarshal itself.", msg)
-// }

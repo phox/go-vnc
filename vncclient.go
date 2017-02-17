@@ -11,6 +11,7 @@ import (
 	"reflect"
 
 	"github.com/kward/go-vnc/go/metrics"
+	"github.com/kward/go-vnc/messages"
 	"golang.org/x/net/context"
 )
 
@@ -209,13 +210,13 @@ func (c *ClientConn) ListenAndHandle() error {
 	if c.config.ServerMessages == nil {
 		return NewVNCError("Client config error: ServerMessages undefined")
 	}
-	serverMessages := make(map[uint8]ServerMessage)
+	serverMessages := make(map[messages.ServerMessage]ServerMessage)
 	for _, m := range c.config.ServerMessages {
 		serverMessages[m.Type()] = m
 	}
 
 	for {
-		var messageType uint8
+		var messageType messages.ServerMessage
 		if err := c.receive(&messageType); err != nil {
 			log.Print("error: reading from server")
 			break

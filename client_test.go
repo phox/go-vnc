@@ -12,6 +12,7 @@ import (
 	"github.com/kward/go-vnc/encodings"
 	"github.com/kward/go-vnc/go/operators"
 	"github.com/kward/go-vnc/keys"
+	"github.com/kward/go-vnc/messages"
 	"golang.org/x/net/context"
 )
 
@@ -23,12 +24,12 @@ func TestSetPixelFormat(t *testing.T) {
 		{
 			PixelFormat{},
 			SetPixelFormatMessage{
-				Msg: setPixelFormatMsg,
+				Msg: messages.SetPixelFormat,
 			}},
 		{
 			NewPixelFormat(16),
 			SetPixelFormatMessage{
-				Msg: setPixelFormatMsg,
+				Msg: messages.SetPixelFormat,
 				PF: PixelFormat{
 					BPP:        16,
 					Depth:      16,
@@ -64,7 +65,7 @@ func TestSetPixelFormat(t *testing.T) {
 		}
 
 		// Validate the request.
-		if got, want := req.Msg, setPixelFormatMsg; got != want {
+		if got, want := req.Msg, messages.SetPixelFormat; got != want {
 			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
 		}
 		if got, want := req.PF.BPP, tt.msg.PF.BPP; got != want {
@@ -109,7 +110,7 @@ func TestSetEncodings(t *testing.T) {
 		}
 
 		// Validate the request.
-		if got, want := req.Msg, setEncodingsMsg; got != want {
+		if got, want := req.Msg, messages.SetEncodings; got != want {
 			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
 			continue
 		}
@@ -159,8 +160,8 @@ func TestFramebufferUpdateRequest(t *testing.T) {
 		}
 
 		// Validate the request.
-		if req.Msg != framebufferUpdateRequestMsg {
-			t.Errorf("incorrect message-type; got = %v, want = %v", req.Msg, framebufferUpdateRequestMsg)
+		if req.Msg != messages.FramebufferUpdateRequest {
+			t.Errorf("incorrect message-type; got = %v, want = %v", req.Msg, messages.FramebufferUpdateRequest)
 		}
 		if req.Inc != tt.inc {
 			t.Errorf("incorrect incremental; got = %v, want = %v", req.Inc, tt.inc)
@@ -232,7 +233,7 @@ func TestKeyEvent(t *testing.T) {
 		}
 
 		// Validate the request.
-		if got, want := req.Msg, keyEventMsg; got != want {
+		if got, want := req.Msg, messages.KeyEvent; got != want {
 			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
 		}
 		var down bool
@@ -307,7 +308,7 @@ func TestPointerEvent(t *testing.T) {
 		}
 
 		// Validate the request.
-		if got, want := req.Msg, pointerEventMsg; got != want {
+		if got, want := req.Msg, messages.PointerEvent; got != want {
 			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
 		}
 		if got, want := req.Mask, buttons.Mask(tt.button); got != want {
@@ -368,7 +369,7 @@ func TestClientCutText(t *testing.T) {
 		}
 
 		// Validate the request.
-		if got, want := req.Msg, clientCutTextMsg; got != want {
+		if got, want := req.Msg, messages.ClientCutText; got != want {
 			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
 		}
 		if got, want := req.Length, uint32(len(tt.sent)); got != want {

@@ -11,23 +11,14 @@ import (
 	"github.com/kward/go-vnc/buttons"
 	"github.com/kward/go-vnc/encodings"
 	"github.com/kward/go-vnc/keys"
-)
-
-const (
-	setPixelFormatMsg = uint8(iota)
-	_
-	setEncodingsMsg
-	framebufferUpdateRequestMsg
-	keyEventMsg
-	pointerEventMsg
-	clientCutTextMsg
+	"github.com/kward/go-vnc/messages"
 )
 
 // SetPixelFormatMessage holds the wire format message.
 type SetPixelFormatMessage struct {
-	Msg uint8       // message-type
-	_   [3]byte     // padding
-	PF  PixelFormat // pixel-format
+	Msg messages.ClientMessage // message-type
+	_   [3]byte                // padding
+	PF  PixelFormat            // pixel-format
 }
 
 // SetPixelFormat sets the format in which pixel values should be sent
@@ -36,7 +27,7 @@ type SetPixelFormatMessage struct {
 // See RFC 6143 Section 7.5.1
 func (c *ClientConn) SetPixelFormat(pf PixelFormat) error {
 	msg := SetPixelFormatMessage{
-		Msg: setPixelFormatMsg,
+		Msg: messages.SetPixelFormat,
 		PF:  pf,
 	}
 	if err := c.send(msg); err != nil {
@@ -54,9 +45,9 @@ func (c *ClientConn) SetPixelFormat(pf PixelFormat) error {
 
 // SetEncodingsMessage holds the wire format message, sans encoding-type field.
 type SetEncodingsMessage struct {
-	Msg     uint8   // message-type
-	_       [1]byte // padding
-	NumEncs uint16  // number-of-encodings
+	Msg     messages.ClientMessage // message-type
+	_       [1]byte                // padding
+	NumEncs uint16                 // number-of-encodings
 }
 
 // SetEncodings sets the encoding types in which the pixel data can be sent
@@ -81,7 +72,7 @@ func (c *ClientConn) SetEncodings(encs Encodings) error {
 
 	// Prepare message.
 	msg := SetEncodingsMessage{
-		Msg:     setEncodingsMsg,
+		Msg:     messages.SetEncodings,
 		NumEncs: uint16(len(encs)),
 	}
 	if err := buf.Write(msg); err != nil {
@@ -106,10 +97,10 @@ func (c *ClientConn) SetEncodings(encs Encodings) error {
 
 // FramebufferUpdateRequestMessage holds the wire format message.
 type FramebufferUpdateRequestMessage struct {
-	Msg           uint8  // message-type
-	Inc           uint8  // incremental
-	X, Y          uint16 // x-, y-position
-	Width, Height uint16 // width, height
+	Msg           messages.ClientMessage // message-type
+	Inc           uint8                  // incremental
+	X, Y          uint16                 // x-, y-position
+	Width, Height uint16                 // width, height
 }
 
 // Requests a framebuffer update from the server. There may be an indefinite
@@ -117,16 +108,16 @@ type FramebufferUpdateRequestMessage struct {
 //
 // See RFC 6143 Section 7.5.3
 func (c *ClientConn) FramebufferUpdateRequest(inc uint8, x, y, w, h uint16) error {
-	msg := FramebufferUpdateRequestMessage{framebufferUpdateRequestMsg, inc, x, y, w, h}
+	msg := FramebufferUpdateRequestMessage{messages.FramebufferUpdateRequest, inc, x, y, w, h}
 	return c.send(&msg)
 }
 
 // KeyEventMessage holds the wire format message.
 type KeyEventMessage struct {
-	Msg      uint8    // message-type
-	DownFlag uint8    // down-flag
-	_        [2]byte  // padding
-	Key      keys.Key // key
+	Msg      messages.ClientMessage // message-type
+	DownFlag uint8                  // down-flag
+	_        [2]byte                // padding
+	Key      keys.Key               // key
 }
 
 const (
@@ -149,7 +140,7 @@ func (c *ClientConn) KeyEvent(key keys.Key, down bool) error {
 	if down {
 		downFlag = RFBTrue
 	}
-	msg := KeyEventMessage{keyEventMsg, downFlag, [2]byte{}, key}
+	msg := KeyEventMessage{messages.KeyEvent, downFlag, [2]byte{}, key}
 	if err := c.send(msg); err != nil {
 		return err
 	}
@@ -160,9 +151,9 @@ func (c *ClientConn) KeyEvent(key keys.Key, down bool) error {
 
 // PointerEventMessage holds the wire format message.
 type PointerEventMessage struct {
-	Msg  uint8  // message-type
-	Mask uint8  // button-mask
-	X, Y uint16 // x-, y-position
+	Msg  messages.ClientMessage // message-type
+	Mask uint8                  // button-mask
+	X, Y uint16                 // x-, y-position
 }
 
 // PointerEvent indicates that pointer movement or a pointer button
@@ -177,7 +168,7 @@ func (c *ClientConn) PointerEvent(button buttons.Button, x, y uint16) error {
 		log.Printf("PointerEvent(%08b, %v, %v)", button, x, y)
 	}
 
-	msg := PointerEventMessage{pointerEventMsg, uint8(button), x, y}
+	msg := PointerEventMessage{messages.PointerEvent, uint8(button), x, y}
 	if err := c.send(msg); err != nil {
 		return err
 	}
@@ -188,9 +179,9 @@ func (c *ClientConn) PointerEvent(button buttons.Button, x, y uint16) error {
 
 // ClientCutTextMessage holds the wire format message, sans the text field.
 type ClientCutTextMessage struct {
-	Msg    uint8   // message-type
-	_      [3]byte // padding
-	Length uint32  // length
+	Msg    messages.ClientMessage // message-type
+	_      [3]byte                // padding
+	Length uint32                 // length
 }
 
 // ClientCutText tells the server that the client has new text in its cut buffer.
@@ -216,7 +207,7 @@ func (c *ClientConn) ClientCutText(text string) error {
 	text = strings.Join(strings.Split(text, "\r"), "")
 
 	msg := ClientCutTextMessage{
-		Msg:    clientCutTextMsg,
+		Msg:    messages.ClientCutText,
 		Length: uint32(len(text)),
 	}
 	if err := c.send(msg); err != nil {
