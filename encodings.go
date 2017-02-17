@@ -31,15 +31,14 @@ type Encoding interface {
 // Encodings describes a slice of Encoding.
 type Encodings []Encoding
 
+// Marshal Encodings as []byte.
 func (e Encodings) Marshal() ([]byte, error) {
 	buf := NewBuffer(nil)
-
 	for _, enc := range e {
 		if err := buf.Write(enc.Type()); err != nil {
 			return nil, err
 		}
 	}
-
 	return buf.Bytes(), nil
 }
 
@@ -72,12 +71,7 @@ func (e *RawEncoding) Marshal() ([]byte, error) {
 
 // Read implements the Encoding interface.
 func (*RawEncoding) Read(c *ClientConn, rect *Rectangle) (Encoding, error) {
-	// if c.debug {
-	// 	log.Printf("RawEncoding.Read(): %s", rect)
-	// }
-
 	var buf bytes.Buffer
-
 	bytesPerPixel := int(c.pixelFormat.BPP / 8)
 	n := rect.Area() * bytesPerPixel
 	if err := c.receiveN(&buf, n); err != nil {
