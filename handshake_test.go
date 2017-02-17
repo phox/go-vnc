@@ -282,7 +282,7 @@ func TestSecurityHandshake38(t *testing.T) {
 		err := conn.securityHandshake()
 		if err != nil && tt.ok {
 			if verr, ok := err.(*VNCError); !ok {
-				t.Fatalf("%d: unexpected %v error: %v", i, reflect.TypeOf(err), verr)
+				t.Fatalf("%d: unexpected %v error: %s", i, reflect.TypeOf(err), verr)
 			}
 		}
 		if err == nil && !tt.ok {
