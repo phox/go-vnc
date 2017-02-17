@@ -36,17 +36,24 @@ func TestParseProtocolVersion(t *testing.T) {
 	for i, tt := range tests {
 		major, minor, err := parseProtocolVersion(tt.proto)
 		if err == nil && !tt.ok {
-			t.Fatal("%v: expected error", i)
+			t.Errorf("%d: expected error", i)
+			continue
 		}
 		if err != nil && tt.ok {
-			t.Fatalf("%v: unexpected error %v", i, err)
+			t.Errorf("%d: unexpected error %v", i, err)
+			continue
+		}
+		if !tt.ok {
+			continue
 		}
 		// TODO(kward): validate VNCError thrown.
 		if got, want := major, tt.major; got != want {
-			t.Errorf("%v: incorrect major version; got = %v, want = %v", i, got, want)
+			t.Errorf("%d: incorrect major version; got = %v, want = %v", i, got, want)
+			continue
 		}
 		if got, want := minor, tt.minor; got != want {
-			t.Errorf("%v: incorrect minor version; got = %v, want = %v", i, got, want)
+			t.Errorf("%d: incorrect minor version; got = %v, want = %v", i, got, want)
+			continue
 		}
 	}
 }
@@ -263,7 +270,7 @@ func TestSecurityHandshake38(t *testing.T) {
 		}
 		if tt.secType == secTypeVNCAuth {
 			if err := writeVNCAuthChallenge(conn.c); err != nil {
-				t.Fatalf("error sending VNCAuth challenge: %v", err)
+				t.Fatalf("error sending VNCAuth challenge: %s", err)
 			}
 		}
 		conn.config.Auth = tt.client
@@ -275,11 +282,11 @@ func TestSecurityHandshake38(t *testing.T) {
 		err := conn.securityHandshake()
 		if err != nil && tt.ok {
 			if verr, ok := err.(*VNCError); !ok {
-				t.Fatalf("%v: unexpected %v error: %v", i, reflect.TypeOf(err), verr)
+				t.Fatalf("%d: unexpected %v error: %v", i, reflect.TypeOf(err), verr)
 			}
 		}
 		if err == nil && !tt.ok {
-			t.Fatalf("%v: expected error for server auth %v", i, tt.secTypes)
+			t.Fatalf("%d: expected error for server auth %v", i, tt.secTypes)
 		}
 		if !tt.ok {
 			continue
@@ -287,24 +294,24 @@ func TestSecurityHandshake38(t *testing.T) {
 
 		// Check bytes sent/received.
 		if got, want := conn.metrics["bytes-received"].Value(), tt.recv; got != want {
-			t.Errorf("%v: incorrect number of bytes received; got = %v, want = %v", i, got, want)
+			t.Errorf("%d: incorrect number of bytes received; got = %v, want = %v", i, got, want)
 		}
 		if got, want := conn.metrics["bytes-sent"].Value(), tt.sent; got != want {
-			t.Errorf("%v: incorrect number of bytes sent; got = %v, want = %v", i, got, want)
+			t.Errorf("%d: incorrect number of bytes sent; got = %v, want = %v", i, got, want)
 		}
 
 		// Validate client response.
 		var secType uint8
 		err = conn.receive(&secType)
 		if got, want := secType, tt.secType; got != want {
-			t.Errorf("%v: incorrect security-type; got = %v, want = %v", i, got, want)
+			t.Errorf("%d: incorrect security-type; got = %v, want = %v", i, got, want)
 		}
 		if got, want := conn.config.secType, secType; got != want {
-			t.Errorf("%v: secType not stored; got = %v, want = %v", i, got, want)
+			t.Errorf("%d: secType not stored; got = %v, want = %v", i, got, want)
 		}
 		if tt.secType == secTypeVNCAuth {
 			if err := readVNCAuthResponse(conn.c); err != nil {
-				t.Fatalf("%v: error reading VNCAuth response: %v", err)
+				t.Fatalf("%d: error reading VNCAuth response: %s", i, err)
 			}
 		}
 

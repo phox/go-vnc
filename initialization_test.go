@@ -23,22 +23,25 @@ func TestClientInit(t *testing.T) {
 		// Send client initialization.
 		conn.config.Exclusive = tt.exclusive
 		if err := conn.clientInit(); err != nil {
-			t.Fatalf("unexpected error: %v", err)
+			t.Fatalf("unexpected error; %s", err)
 		}
 
 		// Validate server reception.
 		var shared uint8
 		if err := conn.receive(&shared); err != nil {
-			t.Fatal("error receiving client init: %v", err)
+			t.Errorf("error receiving client init; %s", err)
+			continue
 		}
 		if got, want := shared, tt.shared; got != want {
-			t.Errorf("incorrect shared-flag: got = %v, want = %v", got, want)
+			t.Errorf("incorrect shared-flag: got = %d, want = %d", got, want)
+			continue
 		}
 
 		// Ensure nothing extra was sent by client.
 		var buf []byte
 		if err := conn.receiveN(&buf, 1024); err != io.EOF {
-			t.Errorf("expected EOF; got = %v", err)
+			t.Errorf("expected EOF; %s", err)
+			continue
 		}
 	}
 }

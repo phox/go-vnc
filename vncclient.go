@@ -19,7 +19,7 @@ func Connect(ctx context.Context, c net.Conn, cfg *ClientConfig) (*ClientConn, e
 	conn := NewClientConn(c, cfg)
 
 	if err := conn.processContext(ctx); err != nil {
-		log.Fatal("invalid context: %v", err)
+		log.Fatalf("invalid context; %s", err)
 	}
 
 	if err := conn.protocolVersionHandshake(ctx); err != nil {
