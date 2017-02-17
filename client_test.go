@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/kward/go-vnc/buttons"
+	"github.com/kward/go-vnc/encodings"
 	"github.com/kward/go-vnc/go/operators"
 	"github.com/kward/go-vnc/keys"
 	"golang.org/x/net/context"
@@ -78,9 +79,9 @@ func TestSetPixelFormat(t *testing.T) {
 func TestSetEncodings(t *testing.T) {
 	tests := []struct {
 		encs     Encodings
-		encTypes []int32
+		encTypes []encodings.Encoding
 	}{
-		{Encodings{&RawEncoding{}}, []int32{0}},
+		{Encodings{&RawEncoding{}}, []encodings.Encoding{0}},
 	}
 
 	mockConn := &MockConn{}
@@ -110,16 +111,18 @@ func TestSetEncodings(t *testing.T) {
 		// Validate the request.
 		if got, want := req.Msg, setEncodingsMsg; got != want {
 			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
+			continue
 		}
 		if got, want := req.NumEncs, uint16(len(tt.encs)); got != want {
 			t.Errorf("incorrect number-of-encodings; got = %v, want = %v", got, want)
+			continue
 		}
 		if got, want := len(encs), len(tt.encs); got != want {
 			t.Errorf("lengths of encodings don't match; got = %v, want = %v", got, want)
 			continue
 		}
 		for i := 0; i < len(tt.encs); i++ {
-			if got, want := encs[i], tt.encs[i].Type(); got != want {
+			if got, want := encodings.Encoding(encs[i]), tt.encs[i].Type(); got != want {
 				t.Errorf("incorrect encoding-type [%v]; got = %v, want = %v", i, got, want)
 			}
 		}

@@ -69,10 +69,6 @@ func (b *Buffer) WriteByte(c byte) error {
 	return b.buf.WriteByte(c)
 }
 
-// type rfbMessage interface {
-// 	Unarshaler interface
-// }
-
 // Marshaler is the interface for objects that can marshal themselves.
 type Marshaler interface {
 	Marshal() ([]byte, error)

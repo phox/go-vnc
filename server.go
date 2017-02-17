@@ -5,6 +5,8 @@ package vnc
 import (
 	"fmt"
 	"log"
+
+	"github.com/kward/go-vnc/encodings"
 )
 
 const (
@@ -27,9 +29,9 @@ type ServerMessage interface {
 
 // Rectangle wire format message.
 type rectangleMessage struct {
-	X, Y uint16 // x-, y-position
-	W, H uint16 // width, height
-	E    int32  // encoding-type
+	X, Y uint16             // x-, y-position
+	W, H uint16             // width, height
+	E    encodings.Encoding // encoding-type
 }
 
 // Rectangle represents a rectangle of pixel data.
@@ -54,7 +56,7 @@ func (r *Rectangle) Read(c *ClientConn) error {
 
 	encImpl, ok := r.encodable(msg.E)
 	if !ok {
-		return fmt.Errorf("unsupported encoding type: %s", msg.E)
+		return fmt.Errorf("unsupported encoding type: %d", msg.E)
 	}
 
 	enc, err := encImpl.Read(c, r)
@@ -97,7 +99,7 @@ func (r *Rectangle) Unmarshal(data []byte) error {
 	r.X, r.Y, r.Width, r.Height = msg.X, msg.Y, msg.W, msg.H
 
 	switch msg.E {
-	case Raw:
+	case encodings.Raw:
 		r.Enc = &RawEncoding{}
 	default:
 		return fmt.Errorf("unable to unmarshal encoding %v", msg.E)
@@ -111,9 +113,9 @@ func (r *Rectangle) String() string {
 	return fmt.Sprintf("< x: %d y: %d, w: %d, h: %d, enc: %v >", r.X, r.Y, r.Width, r.Height, r.Enc)
 }
 
-type EncodableFunc func(enc int32) (Encoding, bool)
+type EncodableFunc func(enc encodings.Encoding) (Encoding, bool)
 
-func (c *ClientConn) Encodable(enc int32) (Encoding, bool) {
+func (c *ClientConn) Encodable(enc encodings.Encoding) (Encoding, bool) {
 	for _, e := range c.encodings {
 		if e.Type() == enc {
 			return e, true

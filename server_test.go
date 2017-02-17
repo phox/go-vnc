@@ -1,8 +1,11 @@
 package vnc
 
-import "testing"
+import (
+	"testing"
 
-import "github.com/kward/go-vnc/go/operators"
+	"github.com/kward/go-vnc/encodings"
+	"github.com/kward/go-vnc/go/operators"
+)
 
 func TestRectangle_Marshal(t *testing.T) {
 	var (
@@ -46,7 +49,7 @@ func TestRectangle_Unmarshal(t *testing.T) {
 		t.Errorf("empty encoding")
 		return
 	}
-	if got, want := rect.Enc.Type(), Raw; got != want {
+	if got, want := rect.Enc.Type(), encodings.Raw; got != want {
 		t.Errorf("incorrect encoding-type; got = %v, want = %v", got, want)
 	}
 }

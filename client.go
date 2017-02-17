@@ -9,6 +9,7 @@ import (
 	"unicode"
 
 	"github.com/kward/go-vnc/buttons"
+	"github.com/kward/go-vnc/encodings"
 	"github.com/kward/go-vnc/keys"
 )
 
@@ -67,7 +68,7 @@ func (c *ClientConn) SetEncodings(encs Encodings) error {
 	// Make sure RawEncoding is supported.
 	haveRaw := false
 	for _, v := range encs {
-		if v.Type() == Raw {
+		if v.Type() == encodings.Raw {
 			haveRaw = true
 			break
 		}

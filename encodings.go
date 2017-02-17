@@ -1,28 +1,23 @@
-// Implementation of RFC 6143 §7.7 Encodings.
-
+/*
+Implementation of RFC 6143 §7.7 Encodings.
+https://tools.ietf.org/html/rfc6143#section-7.7
+*/
 package vnc
 
 import (
 	"bytes"
 	"fmt"
-)
 
-const (
-	Raw               = int32(0)
-	CopyRect          = int32(1)
-	RRE               = int32(2)
-	Hextile           = int32(5)
-	TRLE              = int32(15)
-	ZRLE              = int32(16)
-	ColorPseudo       = int32(-239)
-	DesktopSizePseudo = int32(-223)
+	"github.com/kward/go-vnc/encodings"
 )
 
 // An Encoding implements a method for encoding pixel data that is
 // sent by the server to the client.
 type Encoding interface {
+	fmt.Stringer
+
 	// The number that uniquely identifies this encoding type.
-	Type() int32
+	Type() encodings.Encoding
 
 	// Read the contents of the encoded pixel data from the reader.
 	// This should return a new Encoding implementation that contains
@@ -33,6 +28,7 @@ type Encoding interface {
 	Marshal() ([]byte, error)
 }
 
+// Encodings describes a slice of Encoding.
 type Encodings []Encoding
 
 func (e Encodings) Marshal() ([]byte, error) {
@@ -47,16 +43,17 @@ func (e Encodings) Marshal() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// RawEncoding is raw pixel data sent by the server.
+// RawEncoding is the simplest encoding type, which is raw pixel data.
 // See RFC 6143 §7.7.1.
+// https://tools.ietf.org/html/rfc6143#section-7.7.1
 type RawEncoding struct {
 	Colors []Color
 }
 
-func (*RawEncoding) Type() int32 {
-	return Raw
-}
+// Verify that the Encoding interface is honored.
+var _ Encoding = (*RawEncoding)(nil)
 
+// Marshal implements the Encoding interface.
 func (e *RawEncoding) Marshal() ([]byte, error) {
 	buf := NewBuffer(nil)
 
@@ -73,6 +70,7 @@ func (e *RawEncoding) Marshal() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
+// Read implements the Encoding interface.
 func (*RawEncoding) Read(c *ClientConn, rect *Rectangle) (Encoding, error) {
 	// if c.debug {
 	// 	log.Printf("RawEncoding.Read(): %s", rect)
@@ -100,14 +98,23 @@ func (*RawEncoding) Read(c *ClientConn, rect *Rectangle) (Encoding, error) {
 	return &RawEncoding{colors}, nil
 }
 
+// Type implements the Encoding interface.
+func (*RawEncoding) Type() encodings.Encoding { return encodings.Raw }
+
+// String implements the fmt.Stringer interface.
+func (*RawEncoding) String() string { return "RawEncoding" }
+
 // DesktopSizePseudoEncoding enables desktop resize support.
 // See RFC 6143 §7.8.2.
 type DesktopSizePseudoEncoding struct{}
 
-func (*DesktopSizePseudoEncoding) Type() int32 {
-	return DesktopSizePseudo
-}
+// Verify that the Encoding interface is honored.
+var _ Encoding = (*DesktopSizePseudoEncoding)(nil)
 
+// String implements the fmt.Stringer interface.
+func (e *DesktopSizePseudoEncoding) String() string { return "DesktopSizePseudoEncoding" }
+
+// Read implements the Encoding interface.
 func (*DesktopSizePseudoEncoding) Read(c *ClientConn, rect *Rectangle) (Encoding, error) {
 	c.fbWidth = rect.Width
 	c.fbHeight = rect.Height
@@ -115,6 +122,10 @@ func (*DesktopSizePseudoEncoding) Read(c *ClientConn, rect *Rectangle) (Encoding
 	return &DesktopSizePseudoEncoding{}, nil
 }
 
+// Marshal implements the Encoding interface.
 func (e *DesktopSizePseudoEncoding) Marshal() ([]byte, error) {
 	return []byte{}, nil
 }
+
+// Type implements the Encoding interface.
+func (*DesktopSizePseudoEncoding) Type() encodings.Encoding { return encodings.DesktopSizePseudo }
