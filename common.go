@@ -69,10 +69,20 @@ func (b *Buffer) WriteByte(c byte) error {
 	return b.buf.WriteByte(c)
 }
 
-// Marshaler is the interface satisfied for un-/marshaling.
+// Marshaler is the interface satisfied for marshaling messages.
 type Marshaler interface {
-	// Marshal returns the wire encoding of the ServerMessage.
+	// Marshal returns the wire encoding of a message.
 	Marshal() ([]byte, error)
-	// Unmarshal parses a wire format message into a ServerMessage.
+}
+
+// Unarshaler is the interface satisfied for unmarshaling messages.
+type Unmarshaler interface {
+	// Unmarshal parses a wire format message into a message.
 	Unmarshal(data []byte) error
+}
+
+// MarshalerUnmarshaler satisfies both the Marshaler and Unmarshaler interfaces.
+type MarshalerUnmarshaler interface {
+	Marshaler
+	Unmarshaler
 }

@@ -15,6 +15,7 @@ import (
 // sent by the server to the client.
 type Encoding interface {
 	fmt.Stringer
+	Marshaler
 
 	// The number that uniquely identifies this encoding type.
 	Type() encodings.Encoding
@@ -23,15 +24,12 @@ type Encoding interface {
 	// This should return a new Encoding implementation that contains
 	// the proper data.
 	Read(*ClientConn, *Rectangle) (Encoding, error)
-
-	// Marshal implements the Marshaler interface.
-	Marshal() ([]byte, error)
 }
 
 // Encodings describes a slice of Encoding.
 type Encodings []Encoding
 
-// Marshal Encodings as []byte.
+// Marshal implements the Marshaler interface.
 func (e Encodings) Marshal() ([]byte, error) {
 	buf := NewBuffer(nil)
 	for _, enc := range e {
@@ -116,7 +114,7 @@ func (*DesktopSizePseudoEncoding) Read(c *ClientConn, rect *Rectangle) (Encoding
 	return &DesktopSizePseudoEncoding{}, nil
 }
 
-// Marshal implements the Encoding interface.
+// Marshal implements the Marshaler interface.
 func (e *DesktopSizePseudoEncoding) Marshal() ([]byte, error) {
 	return []byte{}, nil
 }

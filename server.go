@@ -38,7 +38,7 @@ type FramebufferUpdate struct {
 
 // Verify that interfaces are honored.
 var _ ServerMessage = (*FramebufferUpdate)(nil)
-var _ Marshaler = (*FramebufferUpdate)(nil)
+var _ MarshalerUnmarshaler = (*FramebufferUpdate)(nil)
 
 func newFramebufferUpdate(rects []Rectangle) *FramebufferUpdate {
 	return &FramebufferUpdate{
@@ -119,7 +119,7 @@ func (m *FramebufferUpdate) Marshal() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// Unmarshal implements the Marshaler interface.
+// Unmarshal implements the Unmarshaler interface.
 func (m *FramebufferUpdate) Unmarshal(_ []byte) error {
 	return fmt.Errorf("Unmarshal() unimplemented")
 }
@@ -154,8 +154,8 @@ type Rectangle struct {
 }
 
 // Verify that interfaces are honored.
-var _ Marshaler = (*Rectangle)(nil)
 var _ fmt.Stringer = (*Rectangle)(nil)
+var _ MarshalerUnmarshaler = (*Rectangle)(nil)
 
 // NewRectangle returns a new Rectangle object.
 func NewRectangle(fn EncodableFunc) *Rectangle {
@@ -206,7 +206,7 @@ func (r *Rectangle) Marshal() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// Unmarshal implements the Marshaler interface.
+// Unmarshal implements the Unmarshaler interface.
 func (r *Rectangle) Unmarshal(data []byte) error {
 	buf := NewBuffer(data)
 
@@ -300,7 +300,7 @@ type Color struct {
 }
 
 // Verify that interfaces are honored.
-var _ Marshaler = (*Color)(nil)
+var _ MarshalerUnmarshaler = (*Color)(nil)
 
 // ColorMap represents a translation map of colors.
 type ColorMap [256]Color
@@ -339,7 +339,7 @@ func (c *Color) Marshal() ([]byte, error) {
 	return bytes, nil
 }
 
-// Unmarshal implements the Marshaler interface.
+// Unmarshal implements the Unmarshaler interface.
 func (c *Color) Unmarshal(data []byte) error {
 	// TODO(kward): Put back once TestFramebufferUpdate can handle this.
 	// if len(data) == 0 {
