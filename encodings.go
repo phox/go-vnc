@@ -17,17 +17,20 @@ type Encoding interface {
 	fmt.Stringer
 	Marshaler
 
-	// The number that uniquely identifies this encoding type.
-	Type() encodings.Encoding
-
 	// Read the contents of the encoded pixel data from the reader.
 	// This should return a new Encoding implementation that contains
 	// the proper data.
 	Read(*ClientConn, *Rectangle) (Encoding, error)
+
+	// The number that uniquely identifies this encoding type.
+	Type() encodings.Encoding
 }
 
 // Encodings describes a slice of Encoding.
 type Encodings []Encoding
+
+// Verify that interfaces are honored.
+var _ Marshaler = (*Encodings)(nil)
 
 // Marshal implements the Marshaler interface.
 func (e Encodings) Marshal() ([]byte, error) {
@@ -47,7 +50,7 @@ type RawEncoding struct {
 	Colors []Color
 }
 
-// Verify that the Encoding interface is honored.
+// Verify that interfaces are honored.
 var _ Encoding = (*RawEncoding)(nil)
 
 // Marshal implements the Encoding interface.
@@ -90,21 +93,23 @@ func (*RawEncoding) Read(c *ClientConn, rect *Rectangle) (Encoding, error) {
 	return &RawEncoding{colors}, nil
 }
 
-// Type implements the Encoding interface.
-func (*RawEncoding) Type() encodings.Encoding { return encodings.Raw }
-
 // String implements the fmt.Stringer interface.
 func (*RawEncoding) String() string { return "RawEncoding" }
+
+// Type implements the Encoding interface.
+func (*RawEncoding) Type() encodings.Encoding { return encodings.Raw }
 
 // DesktopSizePseudoEncoding enables desktop resize support.
 // See RFC 6143 §7.8.2.
 type DesktopSizePseudoEncoding struct{}
 
-// Verify that the Encoding interface is honored.
+// Verify that interfaces are honored.
 var _ Encoding = (*DesktopSizePseudoEncoding)(nil)
 
-// String implements the fmt.Stringer interface.
-func (e *DesktopSizePseudoEncoding) String() string { return "DesktopSizePseudoEncoding" }
+// Marshal implements the Marshaler interface.
+func (e *DesktopSizePseudoEncoding) Marshal() ([]byte, error) {
+	return []byte{}, nil
+}
 
 // Read implements the Encoding interface.
 func (*DesktopSizePseudoEncoding) Read(c *ClientConn, rect *Rectangle) (Encoding, error) {
@@ -114,10 +119,8 @@ func (*DesktopSizePseudoEncoding) Read(c *ClientConn, rect *Rectangle) (Encoding
 	return &DesktopSizePseudoEncoding{}, nil
 }
 
-// Marshal implements the Marshaler interface.
-func (e *DesktopSizePseudoEncoding) Marshal() ([]byte, error) {
-	return []byte{}, nil
-}
+// String implements the fmt.Stringer interface.
+func (e *DesktopSizePseudoEncoding) String() string { return "DesktopSizePseudoEncoding" }
 
 // Type implements the Encoding interface.
 func (*DesktopSizePseudoEncoding) Type() encodings.Encoding { return encodings.DesktopSizePseudo }
