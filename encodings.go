@@ -11,6 +11,9 @@ import (
 	"github.com/kward/go-vnc/encodings"
 )
 
+//=============================================================================
+// Encodings
+
 // An Encoding implements a method for encoding pixel data that is
 // sent by the server to the client.
 type Encoding interface {
@@ -43,9 +46,15 @@ func (e Encodings) Marshal() ([]byte, error) {
 	return buf.Bytes(), nil
 }
 
-// RawEncoding is the simplest encoding type, which is raw pixel data.
+//-----------------------------------------------------------------------------
+// Raw Encoding
+//
+// Raw encoding is the simplest encoding type, which is raw pixel data.
+//
 // See RFC 6143 §7.7.1.
 // https://tools.ietf.org/html/rfc6143#section-7.7.1
+
+// RawEncoding holds raw encoded rectangle data.
 type RawEncoding struct {
 	Colors []Color
 }
@@ -99,8 +108,27 @@ func (*RawEncoding) String() string { return "RawEncoding" }
 // Type implements the Encoding interface.
 func (*RawEncoding) Type() encodings.Encoding { return encodings.Raw }
 
-// DesktopSizePseudoEncoding enables desktop resize support.
+//=============================================================================
+// Pseudo-Encodings
+//
+// Rectangles with a "pseudo-encoding" allow a server to send data to the
+// client. The interpretation of the data depends on the pseudo-encoding.
+//
+// See RFC 6143 §7.8.
+// https://tools.ietf.org/html/rfc6143#section-7.8
+
+//-----------------------------------------------------------------------------
+// DesktopSize Pseudo-Encoding
+//
+// When a client requests DesktopSize pseudo-encoding, it is indicating to the
+// server that it can handle changes to the framebuffer size. If this encoding
+// received, the client must resize its framebuffer, and drop all existing
+// information stored in the framebuffer.
+//
 // See RFC 6143 §7.8.2.
+// https://tools.ietf.org/html/rfc6143#section-7.8.2
+
+// DesktopSizePseudoEncoding represents a desktop size message from the server.
 type DesktopSizePseudoEncoding struct{}
 
 // Verify that interfaces are honored.
