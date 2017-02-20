@@ -2,20 +2,23 @@
 
 package vnc
 
-import "log"
+import (
+	"github.com/golang/glog"
+	"github.com/kward/go-vnc/logging"
+)
 
 // clientInit implements §7.3.1 ClientInit.
 func (c *ClientConn) clientInit() error {
-	if c.debug {
-		log.Print("clientInit()")
+	if glog.V(logging.FnDeclLevel) {
+		glog.Info(logging.FnName())
 	}
 
 	sharedFlag := uint8(0)
 	if !c.config.Exclusive {
-		sharedFlag = 1
+		sharedFlag = RFBTrue
 	}
-	if c.debug {
-		log.Printf("sharedFlag: %v", sharedFlag)
+	if glog.V(logging.ResultLevel) {
+		glog.Infof("sharedFlag: %d", sharedFlag)
 	}
 	if err := c.send(sharedFlag); err != nil {
 		return err
@@ -26,8 +29,8 @@ func (c *ClientConn) clientInit() error {
 
 // serverInit implements §7.3.2 ServerInit.
 func (c *ClientConn) serverInit() error {
-	if c.debug {
-		log.Print("serverInit()")
+	if glog.V(logging.FnDeclLevel) {
+		glog.Info(logging.FnName())
 	}
 
 	var width, height uint16
@@ -38,28 +41,34 @@ func (c *ClientConn) serverInit() error {
 	if err := c.receive(&height); err != nil {
 		return err
 	}
+	if glog.V(logging.ResultLevel) {
+		glog.Infof("width: %d height: %d", width, height)
+	}
 	c.setFramebufferHeight(height)
 
 	if err := c.pixelFormat.Read(c.c); err != nil {
 		return err
 	}
-	if c.debug {
-		log.Printf("pixelFormat:%v", c.pixelFormat)
+	if glog.V(logging.ResultLevel) {
+		glog.Infof("pixelFormat: %v", c.pixelFormat)
 	}
 
 	var nameLength uint32
 	if err := c.receive(&nameLength); err != nil {
 		return err
 	}
-	if c.debug {
-		log.Printf("nameLength:%v", nameLength)
+	if glog.V(logging.ResultLevel) {
+		glog.Infof("desktopName length: %d", nameLength)
 	}
 
-	nameBytes := make([]uint8, nameLength)
-	if err := c.receive(&nameBytes); err != nil {
+	name := make([]uint8, nameLength)
+	if err := c.receive(&name); err != nil {
 		return err
 	}
-	c.setDesktopName(string(nameBytes))
+	if glog.V(logging.ResultLevel) {
+		glog.Infof("desktopName: %s", name)
+	}
+	c.setDesktopName(string(name))
 
 	return nil
 }

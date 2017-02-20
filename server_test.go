@@ -62,24 +62,26 @@ func TestFramebufferUpdate(t *testing.T) {
 	// TODO(kward): give some real rectangles so this hack isn't necessary.
 	conn.pixelFormat = PixelFormat{}
 
-	tests := []struct {
+	for _, tt := range []struct {
+		desc  string
 		rects []Rectangle
+		ok    bool
 	}{
-		{[]Rectangle{{1, 2, 3, 4, &RawEncoding{}, conn.Encodable}}},
-	}
-
-	for _, tt := range tests {
+		{"single raw encoded rect",
+			[]Rectangle{{1, 2, 3, 4, &RawEncoding{}, conn.Encodable}}, true},
+	} {
 		mockConn.Reset()
 
 		// Send the message.
 		msg := newFramebufferUpdate(tt.rects)
 		bytes, err := msg.Marshal()
 		if err != nil {
-			t.Fatal(err)
+			t.Errorf("%s: failed to marshal; %s", tt.desc, err)
 			continue
 		}
 		if err := conn.send(bytes); err != nil {
-			t.Fatal(err)
+			t.Errorf("%s: failed to send; %s", tt.desc, err)
+			continue
 		}
 
 		// Validate message handling.
@@ -90,41 +92,41 @@ func TestFramebufferUpdate(t *testing.T) {
 		fu := &FramebufferUpdate{}
 		parsedFU, err := fu.Read(conn)
 		if err != nil {
-			t.Fatalf("unexpected error: %v", err)
+			t.Fatalf("%s: failed to read; %s", tt.desc, err)
 		}
 		rects := parsedFU.(*FramebufferUpdate).Rects
 
 		// Validate the message.
 		if got, want := len(rects), len(tt.rects); got != want {
-			t.Errorf("incorrect number-of-rectangles; got = %v, want = %v", got, want)
+			t.Errorf("%s: incorrect number-of-rectangles; got %d, want %d", tt.desc, got, want)
 			continue
 		}
 		for i, r := range tt.rects {
 			if got, want := rects[i].X, r.X; got != want {
-				t.Errorf("rect[%v] incorrect x-position; got = %v, want = %v", i, got, want)
+				t.Errorf("%s: rect[%d] incorrect x-position; got %d, want %d", tt.desc, i, got, want)
 			}
 			if got, want := rects[i].Y, r.Y; got != want {
-				t.Errorf("rect[%v] incorrect y-position; got = %v, want = %v", i, got, want)
+				t.Errorf("%s: rect[%d] incorrect y-position; got %d, want %d", tt.desc, i, got, want)
 			}
 			if got, want := rects[i].Width, r.Width; got != want {
-				t.Errorf("rect[%v] incorrect width; got = %v, want = %v", i, got, want)
+				t.Errorf("%s: rect[%d] incorrect width; got %d, want %d", tt.desc, i, got, want)
 			}
 			if got, want := rects[i].Height, r.Height; got != want {
-				t.Errorf("rect[%v] incorrect height; got = %v, want = %v", i, got, want)
+				t.Errorf("%s: rect[%d] incorrect height; got %d, want %d", tt.desc, i, got, want)
 			}
 			if rects[i].Enc == nil {
-				t.Errorf("rect[%v] has empty encoding", i)
+				t.Errorf("%s: rect[%d] has empty encoding", tt.desc, i)
 				continue
 			}
 			if got, want := rects[i].Enc.Type(), r.Enc.Type(); got != want {
-				t.Errorf("rect[%v] incorrect encoding-type; got = %v, want = %v", i, got, want)
+				t.Errorf("%s: rect[%d] incorrect encoding-type; got %d, want %d", tt.desc, i, got, want)
 			}
 		}
 	}
 }
 
 func TestColor_Marshal(t *testing.T) {
-	var cm ColorMap
+	cm := ColorMap{}
 	for i := 0; i < len(cm); i++ {
 		cm[i] = Color{R: uint16(i), G: uint16(i << 4), B: uint16(i << 8)}
 	}

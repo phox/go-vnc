@@ -10,7 +10,9 @@ import (
 	"net"
 	"reflect"
 
+	"github.com/golang/glog"
 	"github.com/kward/go-vnc/go/metrics"
+	"github.com/kward/go-vnc/logging"
 	"github.com/kward/go-vnc/messages"
 	"golang.org/x/net/context"
 )
@@ -260,8 +262,10 @@ func (c *ClientConn) receive(data interface{}) error {
 
 // receiveN receives N packets from the network.
 func (c *ClientConn) receiveN(data interface{}, n int) error {
+	if glog.V(logging.FnDeclLevel) {
+		glog.Info("ClientConn." + logging.FnName())
+	}
 	if n == 0 {
-		log.Println("warn: receiveN requested no data")
 		return nil
 	}
 

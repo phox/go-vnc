@@ -6,9 +6,11 @@ package vnc
 
 import (
 	"fmt"
-	"log"
+	"image"
 
+	"github.com/golang/glog"
 	"github.com/kward/go-vnc/encodings"
+	"github.com/kward/go-vnc/logging"
 	"github.com/kward/go-vnc/messages"
 )
 
@@ -52,8 +54,8 @@ func (m *FramebufferUpdate) Type() messages.ServerMessage { return messages.Fram
 
 // Read implements the ServerMessage interface.
 func (m *FramebufferUpdate) Read(c *ClientConn) (ServerMessage, error) {
-	if c.debug {
-		log.Print("FramebufferUpdate.Read()")
+	if glog.V(logging.FnDeclLevel) {
+		glog.Info("FramebufferUpdate." + logging.FnName())
 	}
 
 	// Build the map of supported encodings.
@@ -68,16 +70,16 @@ func (m *FramebufferUpdate) Read(c *ClientConn) (ServerMessage, error) {
 	if err := c.receive(&pad); err != nil {
 		return nil, err
 	}
-	if c.debug {
-		log.Printf("pad:%v", pad)
+	if glog.V(logging.FnDeclLevel) {
+		glog.Infof("pad: %v", pad)
 	}
 
 	var numRects uint16
 	if err := c.receive(&numRects); err != nil {
 		return nil, err
 	}
-	if c.debug {
-		log.Printf("FramebufferUpdate.Read() numRects: %v", numRects)
+	if glog.V(logging.FnDeclLevel) {
+		glog.Infof("numRects: %d", numRects)
 	}
 
 	// Extract rectangles.
@@ -95,8 +97,11 @@ func (m *FramebufferUpdate) Read(c *ClientConn) (ServerMessage, error) {
 
 // Marshal implements the Marshaler interface.
 func (m *FramebufferUpdate) Marshal() ([]byte, error) {
-	buf := NewBuffer(nil)
+	if glog.V(logging.FnDeclLevel) {
+		glog.Info("FramebufferUpdate." + logging.FnName())
+	}
 
+	buf := NewBuffer(nil)
 	msg := struct {
 		msg      messages.ServerMessage // message-type
 		_        [1]byte                // padding
@@ -121,6 +126,9 @@ func (m *FramebufferUpdate) Marshal() ([]byte, error) {
 
 // Unmarshal implements the Unmarshaler interface.
 func (m *FramebufferUpdate) Unmarshal(_ []byte) error {
+	if glog.V(logging.FnDeclLevel) {
+		glog.Info("FramebufferUpdate." + logging.FnName())
+	}
 	return fmt.Errorf("Unmarshal() unimplemented")
 }
 
@@ -130,6 +138,9 @@ type EncodableFunc func(enc encodings.Encoding) (Encoding, bool)
 // Encodable returns the Encoding that can be used to encode a Rectangle, or
 // false if the encoding isn't recognized.
 func (c *ClientConn) Encodable(enc encodings.Encoding) (Encoding, bool) {
+	if glog.V(logging.FnDeclLevel) {
+		glog.Info("ClientConn." + logging.FnName())
+	}
 	for _, e := range c.encodings {
 		if e.Type() == enc {
 			return e, true
@@ -164,6 +175,10 @@ func NewRectangle(fn EncodableFunc) *Rectangle {
 
 // Read a rectangle message from ClientConn c.
 func (r *Rectangle) Read(c *ClientConn) error {
+	if glog.V(logging.FnDeclLevel) {
+		glog.Info("Rectangle." + logging.FnName())
+	}
+
 	var msg rectangleMessage
 	if err := c.receive(&msg); err != nil {
 		return err
@@ -186,6 +201,10 @@ func (r *Rectangle) Read(c *ClientConn) error {
 
 // Marshal implements the Marshaler interface.
 func (r *Rectangle) Marshal() ([]byte, error) {
+	if glog.V(logging.FnDeclLevel) {
+		glog.Info("Rectangle." + logging.FnName())
+	}
+
 	buf := NewBuffer(nil)
 
 	var msg rectangleMessage
@@ -208,6 +227,10 @@ func (r *Rectangle) Marshal() ([]byte, error) {
 
 // Unmarshal implements the Unmarshaler interface.
 func (r *Rectangle) Unmarshal(data []byte) error {
+	if glog.V(logging.FnDeclLevel) {
+		glog.Info("Rectangle." + logging.FnName())
+	}
+
 	buf := NewBuffer(data)
 
 	var msg rectangleMessage
@@ -257,8 +280,8 @@ func (*SetColorMapEntries) Type() messages.ServerMessage { return messages.SetCo
 
 // Read implements the ServerMessage interface.
 func (*SetColorMapEntries) Read(c *ClientConn) (ServerMessage, error) {
-	if c.debug {
-		log.Print("SetColorMapEntries.Read()")
+	if glog.V(logging.FnDeclLevel) {
+		glog.Info("SetColorMapEntries." + logging.FnName())
 	}
 
 	// Read off the padding
@@ -307,20 +330,24 @@ type ColorMap [256]Color
 
 // NewColor returns a new Color object.
 func NewColor(pf *PixelFormat, cm *ColorMap) *Color {
-	return &Color{pf: pf, cm: cm}
+	return &Color{
+		pf: pf,
+		cm: cm,
+	}
 }
 
 // Marshal implements the Marshaler interface.
 func (c *Color) Marshal() ([]byte, error) {
-	order := c.pf.order()
+	if glog.V(logging.FnDeclLevel) {
+		glog.Info("Color." + logging.FnName())
+	}
 
-	var pixel uint32
+	order := c.pf.order()
+	pixel := c.cmIndex
 	if c.pf.TrueColor == RFBTrue {
 		pixel = uint32(c.R) << c.pf.RedShift
 		pixel |= uint32(c.G) << c.pf.GreenShift
 		pixel |= uint32(c.B) << c.pf.BlueShift
-	} else {
-		pixel = c.cmIndex
 	}
 
 	var bytes []byte
@@ -341,10 +368,14 @@ func (c *Color) Marshal() ([]byte, error) {
 
 // Unmarshal implements the Unmarshaler interface.
 func (c *Color) Unmarshal(data []byte) error {
-	// TODO(kward): Put back once TestFramebufferUpdate can handle this.
-	// if len(data) == 0 {
-	// 	return NewVNCError(fmt.Sprint("Could not unmarshal empty data slice"))
-	// }
+	if glog.V(logging.FnDeclLevel) {
+		glog.Info("Color." + logging.FnName())
+	}
+
+	if len(data) == 0 {
+		return nil
+	}
+
 	order := c.pf.order()
 
 	var pixel uint32
@@ -369,6 +400,23 @@ func (c *Color) Unmarshal(data []byte) error {
 	return nil
 }
 
+func colorsToImage(x, y, width, height uint16, colors []Color) *image.RGBA64 {
+	rect := image.Rect(int(x), int(y), int(x+width), int(y+height))
+	rgba := image.NewRGBA64(rect)
+	a := uint16(1)
+	for i, color := range colors {
+		rgba.Pix[4*i+0] = uint8(color.R >> 8)
+		rgba.Pix[4*i+1] = uint8(color.R)
+		rgba.Pix[4*i+2] = uint8(color.G >> 8)
+		rgba.Pix[4*i+3] = uint8(color.G)
+		rgba.Pix[4*i+4] = uint8(color.B >> 8)
+		rgba.Pix[4*i+5] = uint8(color.B)
+		rgba.Pix[4*i+6] = uint8(a >> 8)
+		rgba.Pix[4*i+7] = uint8(a)
+	}
+	return rgba
+}
+
 //-----------------------------------------------------------------------------
 // Bell signals that an audible bell should be made on the client.
 //
@@ -386,8 +434,8 @@ func (*Bell) Type() messages.ServerMessage { return messages.Bell }
 
 // Read implements the ServerMessage interface.
 func (*Bell) Read(c *ClientConn) (ServerMessage, error) {
-	if c.debug {
-		log.Print("Bell.Read()")
+	if glog.V(logging.FnDeclLevel) {
+		glog.Info("Bell." + logging.FnName())
 	}
 	return &Bell{}, nil
 }
@@ -412,8 +460,8 @@ func (*ServerCutText) Type() messages.ServerMessage { return messages.ServerCutT
 
 // Read implements the ServerMessage interface.
 func (*ServerCutText) Read(c *ClientConn) (ServerMessage, error) {
-	if c.debug {
-		log.Print("ServerCutText.Read()")
+	if glog.V(logging.FnDeclLevel) {
+		glog.Info("ServerCutText." + logging.FnName())
 	}
 
 	// Read off the padding
