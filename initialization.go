@@ -9,7 +9,7 @@ import (
 
 // clientInit implements §7.3.1 ClientInit.
 func (c *ClientConn) clientInit() error {
-	if glog.V(logging.FnDeclLevel) {
+	if logging.V(logging.FnDeclLevel) {
 		glog.Info(logging.FnName())
 	}
 
@@ -17,7 +17,7 @@ func (c *ClientConn) clientInit() error {
 	if !c.config.Exclusive {
 		sharedFlag = RFBTrue
 	}
-	if glog.V(logging.ResultLevel) {
+	if logging.V(logging.ResultLevel) {
 		glog.Infof("sharedFlag: %d", sharedFlag)
 	}
 	if err := c.send(sharedFlag); err != nil {
@@ -29,7 +29,7 @@ func (c *ClientConn) clientInit() error {
 
 // serverInit implements §7.3.2 ServerInit.
 func (c *ClientConn) serverInit() error {
-	if glog.V(logging.FnDeclLevel) {
+	if logging.V(logging.FnDeclLevel) {
 		glog.Info(logging.FnName())
 	}
 
@@ -41,15 +41,12 @@ func (c *ClientConn) serverInit() error {
 	if err := c.receive(&height); err != nil {
 		return err
 	}
-	if glog.V(logging.ResultLevel) {
-		glog.Infof("width: %d height: %d", width, height)
-	}
 	c.setFramebufferHeight(height)
 
 	if err := c.pixelFormat.Read(c.c); err != nil {
 		return err
 	}
-	if glog.V(logging.ResultLevel) {
+	if logging.V(logging.ResultLevel) {
 		glog.Infof("pixelFormat: %v", c.pixelFormat)
 	}
 
@@ -57,16 +54,10 @@ func (c *ClientConn) serverInit() error {
 	if err := c.receive(&nameLength); err != nil {
 		return err
 	}
-	if glog.V(logging.ResultLevel) {
-		glog.Infof("desktopName length: %d", nameLength)
-	}
 
 	name := make([]uint8, nameLength)
 	if err := c.receive(&name); err != nil {
 		return err
-	}
-	if glog.V(logging.ResultLevel) {
-		glog.Infof("desktopName: %s", name)
 	}
 	c.setDesktopName(string(name))
 

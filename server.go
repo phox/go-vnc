@@ -54,7 +54,7 @@ func (m *FramebufferUpdate) Type() messages.ServerMessage { return messages.Fram
 
 // Read implements the ServerMessage interface.
 func (m *FramebufferUpdate) Read(c *ClientConn) (ServerMessage, error) {
-	if glog.V(logging.FnDeclLevel) {
+	if logging.V(logging.FnDeclLevel) {
 		glog.Info("FramebufferUpdate." + logging.FnName())
 	}
 
@@ -70,7 +70,7 @@ func (m *FramebufferUpdate) Read(c *ClientConn) (ServerMessage, error) {
 	if err := c.receive(&pad); err != nil {
 		return nil, err
 	}
-	if glog.V(logging.FnDeclLevel) {
+	if logging.V(logging.FnDeclLevel) {
 		glog.Infof("pad: %v", pad)
 	}
 
@@ -78,7 +78,7 @@ func (m *FramebufferUpdate) Read(c *ClientConn) (ServerMessage, error) {
 	if err := c.receive(&numRects); err != nil {
 		return nil, err
 	}
-	if glog.V(logging.FnDeclLevel) {
+	if logging.V(logging.FnDeclLevel) {
 		glog.Infof("numRects: %d", numRects)
 	}
 
@@ -97,7 +97,7 @@ func (m *FramebufferUpdate) Read(c *ClientConn) (ServerMessage, error) {
 
 // Marshal implements the Marshaler interface.
 func (m *FramebufferUpdate) Marshal() ([]byte, error) {
-	if glog.V(logging.FnDeclLevel) {
+	if logging.V(logging.FnDeclLevel) {
 		glog.Info("FramebufferUpdate." + logging.FnName())
 	}
 
@@ -126,7 +126,7 @@ func (m *FramebufferUpdate) Marshal() ([]byte, error) {
 
 // Unmarshal implements the Unmarshaler interface.
 func (m *FramebufferUpdate) Unmarshal(_ []byte) error {
-	if glog.V(logging.FnDeclLevel) {
+	if logging.V(logging.FnDeclLevel) {
 		glog.Info("FramebufferUpdate." + logging.FnName())
 	}
 	return fmt.Errorf("Unmarshal() unimplemented")
@@ -138,7 +138,7 @@ type EncodableFunc func(enc encodings.Encoding) (Encoding, bool)
 // Encodable returns the Encoding that can be used to encode a Rectangle, or
 // false if the encoding isn't recognized.
 func (c *ClientConn) Encodable(enc encodings.Encoding) (Encoding, bool) {
-	if glog.V(logging.FnDeclLevel) {
+	if logging.V(logging.FnDeclLevel) {
 		glog.Info("ClientConn." + logging.FnName())
 	}
 	for _, e := range c.encodings {
@@ -175,7 +175,7 @@ func NewRectangle(fn EncodableFunc) *Rectangle {
 
 // Read a rectangle message from ClientConn c.
 func (r *Rectangle) Read(c *ClientConn) error {
-	if glog.V(logging.FnDeclLevel) {
+	if logging.V(logging.FnDeclLevel) {
 		glog.Info("Rectangle." + logging.FnName())
 	}
 
@@ -201,7 +201,7 @@ func (r *Rectangle) Read(c *ClientConn) error {
 
 // Marshal implements the Marshaler interface.
 func (r *Rectangle) Marshal() ([]byte, error) {
-	if glog.V(logging.FnDeclLevel) {
+	if logging.V(logging.FnDeclLevel) {
 		glog.Info("Rectangle." + logging.FnName())
 	}
 
@@ -227,7 +227,7 @@ func (r *Rectangle) Marshal() ([]byte, error) {
 
 // Unmarshal implements the Unmarshaler interface.
 func (r *Rectangle) Unmarshal(data []byte) error {
-	if glog.V(logging.FnDeclLevel) {
+	if logging.V(logging.FnDeclLevel) {
 		glog.Info("Rectangle." + logging.FnName())
 	}
 
@@ -280,7 +280,7 @@ func (*SetColorMapEntries) Type() messages.ServerMessage { return messages.SetCo
 
 // Read implements the ServerMessage interface.
 func (*SetColorMapEntries) Read(c *ClientConn) (ServerMessage, error) {
-	if glog.V(logging.FnDeclLevel) {
+	if logging.V(logging.FnDeclLevel) {
 		glog.Info("SetColorMapEntries." + logging.FnName())
 	}
 
@@ -338,7 +338,7 @@ func NewColor(pf *PixelFormat, cm *ColorMap) *Color {
 
 // Marshal implements the Marshaler interface.
 func (c *Color) Marshal() ([]byte, error) {
-	if glog.V(logging.FnDeclLevel) {
+	if logging.V(logging.FnDeclLevel) {
 		glog.Info("Color." + logging.FnName())
 	}
 
@@ -368,7 +368,7 @@ func (c *Color) Marshal() ([]byte, error) {
 
 // Unmarshal implements the Unmarshaler interface.
 func (c *Color) Unmarshal(data []byte) error {
-	if glog.V(logging.FnDeclLevel) {
+	if logging.V(logging.SpamLevel) {
 		glog.Info("Color." + logging.FnName())
 	}
 
@@ -434,7 +434,7 @@ func (*Bell) Type() messages.ServerMessage { return messages.Bell }
 
 // Read implements the ServerMessage interface.
 func (*Bell) Read(c *ClientConn) (ServerMessage, error) {
-	if glog.V(logging.FnDeclLevel) {
+	if logging.V(logging.FnDeclLevel) {
 		glog.Info("Bell." + logging.FnName())
 	}
 	return &Bell{}, nil
@@ -460,7 +460,7 @@ func (*ServerCutText) Type() messages.ServerMessage { return messages.ServerCutT
 
 // Read implements the ServerMessage interface.
 func (*ServerCutText) Read(c *ClientConn) (ServerMessage, error) {
-	if glog.V(logging.FnDeclLevel) {
+	if logging.V(logging.FnDeclLevel) {
 		glog.Info("ServerCutText." + logging.FnName())
 	}
 

@@ -128,9 +128,6 @@ type ClientConn struct {
 
 	// Track metrics on system performance.
 	metrics map[string]metrics.Metric
-
-	// Flag to determine whether debug output should be provided.
-	debug bool
 }
 
 func NewClientConn(c net.Conn, cfg *ClientConfig) *ClientConn {
@@ -159,8 +156,8 @@ func (c *ClientConn) DesktopName() string {
 
 // setDesktopName stores the server provided desktop name.
 func (c *ClientConn) setDesktopName(name string) {
-	if c.debug {
-		log.Printf("desktopName: %v", name)
+	if logging.V(logging.ResultLevel) {
+		glog.Infof("desktopName: %s", name)
 	}
 	c.desktopName = name
 }
@@ -177,8 +174,8 @@ func (c *ClientConn) FramebufferHeight() uint16 {
 
 // setFramebufferHeight stores the server provided framebuffer height.
 func (c *ClientConn) setFramebufferHeight(height uint16) {
-	if c.debug {
-		log.Printf("framebufferHeight: %v", height)
+	if logging.V(logging.ResultLevel) {
+		glog.Infof("height: %d", height)
 	}
 	c.fbHeight = height
 }
@@ -190,22 +187,16 @@ func (c *ClientConn) FramebufferWidth() uint16 {
 
 // setFramebufferWidth stores the server provided framebuffer width.
 func (c *ClientConn) setFramebufferWidth(width uint16) {
-	if c.debug {
-		log.Printf("framebufferWidth: %v", width)
+	if logging.V(logging.ResultLevel) {
+		glog.Infof("width: %d", width)
 	}
 	c.fbWidth = width
 }
 
-// SetDebugging [dis-]enables debugging.
-func (c *ClientConn) SetDebug(debug bool) {
-	log.Printf("debug: %v", debug)
-	c.debug = debug
-}
-
 // ListenAndHandle listens to a VNC server and handles server messages.
 func (c *ClientConn) ListenAndHandle() error {
-	if c.debug {
-		log.Println("ListenAndHanndle()")
+	if logging.V(logging.FnDeclLevel) {
+		glog.Info(logging.FnName())
 	}
 	defer c.Close()
 
@@ -223,8 +214,8 @@ func (c *ClientConn) ListenAndHandle() error {
 			log.Print("error: reading from server")
 			break
 		}
-		if c.debug {
-			log.Printf("message-type: %v", messageType)
+		if logging.V(logging.ResultLevel) {
+			glog.Infof("message-type: %s", messageType)
 		}
 
 		msg, ok := serverMessages[messageType]
@@ -262,7 +253,7 @@ func (c *ClientConn) receive(data interface{}) error {
 
 // receiveN receives N packets from the network.
 func (c *ClientConn) receiveN(data interface{}, n int) error {
-	if glog.V(logging.FnDeclLevel) {
+	if logging.V(logging.FnDeclLevel) {
 		glog.Info("ClientConn." + logging.FnName())
 	}
 	if n == 0 {
@@ -340,10 +331,6 @@ func (c *ClientConn) send(data interface{}) error {
 // }
 
 func (c *ClientConn) processContext(ctx context.Context) error {
-	if debug := ctx.Value("debug"); debug != nil {
-		c.SetDebug(debug.(bool))
-	}
-
 	if mpv := ctx.Value("vnc_max_proto_version"); mpv != nil && mpv != "" {
 		log.Printf("vnc_max_proto_version: %v", mpv)
 		vers := []string{"3.3", "3.8"}

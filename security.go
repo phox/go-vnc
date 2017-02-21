@@ -4,7 +4,9 @@ package vnc
 
 import (
 	"crypto/des"
-	"log"
+
+	"github.com/golang/glog"
+	"github.com/kward/go-vnc/logging"
 )
 
 const (
@@ -32,8 +34,8 @@ func (*ClientAuthNone) SecurityType() uint8 {
 }
 
 func (*ClientAuthNone) Handshake(conn *ClientConn) error {
-	if conn.debug {
-		log.Print("ClientAuthNone.Handshake()")
+	if logging.V(logging.FnDeclLevel) {
+		glog.Info("ClientAuthNone." + logging.FnName())
 	}
 
 	return nil
@@ -51,8 +53,8 @@ func (*ClientAuthVNC) SecurityType() uint8 {
 }
 
 func (auth *ClientAuthVNC) Handshake(conn *ClientConn) error {
-	if conn.debug {
-		log.Print("ClientAuthVNC.Handshake()")
+	if logging.V(logging.FnDeclLevel) {
+		glog.Info("ClientAuthVNC." + logging.FnName())
 	}
 
 	if auth.Password == "" {
