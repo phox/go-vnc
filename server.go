@@ -70,7 +70,7 @@ func (m *FramebufferUpdate) Read(c *ClientConn) (ServerMessage, error) {
 	if err := c.receive(&pad); err != nil {
 		return nil, err
 	}
-	if logging.V(logging.FnDeclLevel) {
+	if logging.V(logging.ResultLevel) {
 		glog.Infof("pad: %v", pad)
 	}
 
@@ -78,7 +78,7 @@ func (m *FramebufferUpdate) Read(c *ClientConn) (ServerMessage, error) {
 	if err := c.receive(&numRects); err != nil {
 		return nil, err
 	}
-	if logging.V(logging.FnDeclLevel) {
+	if logging.V(logging.ResultLevel) {
 		glog.Infof("numRects: %d", numRects)
 	}
 
