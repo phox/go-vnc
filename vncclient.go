@@ -254,7 +254,7 @@ func (c *ClientConn) receive(data interface{}) error {
 // receiveN receives N packets from the network.
 func (c *ClientConn) receiveN(data interface{}, n int) error {
 	if logging.V(logging.FnDeclLevel) {
-		glog.Info("ClientConn." + logging.FnName())
+		glog.Infof("ClientConn.%s", logging.FnName())
 	}
 	if n == 0 {
 		return nil
@@ -297,6 +297,9 @@ func (c *ClientConn) receiveN(data interface{}, n int) error {
 
 // send a packet to the network.
 func (c *ClientConn) send(data interface{}) error {
+	if logging.V(logging.SpamLevel) {
+		glog.Infof("ClientConn.%s", logging.FnNameWithArgs("%v", data))
+	}
 	if err := binary.Write(c.c, binary.BigEndian, data); err != nil {
 		return err
 	}

@@ -250,7 +250,7 @@ func (r *Rectangle) Unmarshal(data []byte) error {
 
 // String implements the fmt.Stringer interface.
 func (r *Rectangle) String() string {
-	return fmt.Sprintf("< x: %d y: %d, w: %d, h: %d, enc: %v >", r.X, r.Y, r.Width, r.Height, r.Enc)
+	return fmt.Sprintf("{ x: %d y: %d, w: %d, h: %d, enc: %v }", r.X, r.Y, r.Width, r.Height, r.Enc)
 }
 
 // Area returns the total area in pixels of the Rectangle.
@@ -339,7 +339,7 @@ func NewColor(pf *PixelFormat, cm *ColorMap) *Color {
 // Marshal implements the Marshaler interface.
 func (c *Color) Marshal() ([]byte, error) {
 	if logging.V(logging.FnDeclLevel) {
-		glog.Info("Color." + logging.FnName())
+		glog.Infof("Color.%s", logging.FnName())
 	}
 
 	order := c.pf.order()
@@ -368,8 +368,8 @@ func (c *Color) Marshal() ([]byte, error) {
 
 // Unmarshal implements the Unmarshaler interface.
 func (c *Color) Unmarshal(data []byte) error {
-	if logging.V(logging.SpamLevel) {
-		glog.Info("Color." + logging.FnName())
+	if logging.V(logging.CrazySpamLevel) {
+		glog.Infof("Color.%s", logging.FnName())
 	}
 
 	if len(data) == 0 {
