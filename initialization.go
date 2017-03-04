@@ -13,9 +13,9 @@ func (c *ClientConn) clientInit() error {
 		glog.Info(logging.FnName())
 	}
 
-	sharedFlag := uint8(0)
-	if !c.config.Exclusive {
-		sharedFlag = RFBTrue
+	sharedFlag := RFBTrue
+	if c.config.Exclusive {
+		sharedFlag = RFBFalse
 	}
 	if logging.V(logging.ResultLevel) {
 		glog.Infof("sharedFlag: %d", sharedFlag)
@@ -23,6 +23,9 @@ func (c *ClientConn) clientInit() error {
 	if err := c.send(sharedFlag); err != nil {
 		return err
 	}
+
+	// TODO(kward)20170226): VENUE responds with some sort of shared flag
+	// response, which includes the VENUE name and IPs. Handle this?
 
 	return nil
 }
