@@ -12,10 +12,11 @@ import (
 )
 
 const (
-	FlowLevel   = 2
-	FnDeclLevel = 3
-	ResultLevel = 4
-	SpamLevel   = 5
+	FlowLevel      = 2
+	FnDeclLevel    = 3
+	ResultLevel    = 4
+	SpamLevel      = 5
+	CrazySpamLevel = 6
 )
 
 func V(level glog.Level) glog.Verbose {
