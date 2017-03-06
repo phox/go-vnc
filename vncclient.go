@@ -46,6 +46,18 @@ func Connect(ctx context.Context, c net.Conn, cfg *ClientConfig) (*ClientConn, e
 		return nil, err
 	}
 
+	// Send client-to-server messages.
+	encs := conn.encodings
+	if err := conn.SetEncodings(encs); err != nil {
+		conn.Close()
+		return nil, Errorf("failure calling SetEncodings; %s", err)
+	}
+	pf := conn.pixelFormat
+	if err := conn.SetPixelFormat(pf); err != nil {
+		conn.Close()
+		return nil, Errorf("failure calling SetPixelFormat; %s", err)
+	}
+
 	return conn, nil
 }
 
@@ -112,7 +124,7 @@ type ClientConn struct {
 	desktopName string
 
 	// Encodings supported by the client. This should not be modified
-	// directly. Instead, SetEncodings should be used.
+	// directly. Instead, SetEncodings() should be used.
 	encodings Encodings
 
 	// Height of the frame buffer in pixels, sent from the server.
