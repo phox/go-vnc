@@ -6,6 +6,13 @@ import (
 	"testing"
 
 	"github.com/kward/go-vnc/go/operators"
+	"github.com/kward/go-vnc/rfbflags"
+)
+
+const (
+	// Shadow the RFBFlag constants.
+	RFBFalse = rfbflags.RFBFalse
+	RFBTrue  = rfbflags.RFBTrue
 )
 
 func TestPixelFormat_Marshal(t *testing.T) {
@@ -105,6 +112,22 @@ func TestPixelFormat_Unmarshal(t *testing.T) {
 		}
 		if got, want := pf, tt.pf; !equalPixelFormat(got, want) {
 			t.Errorf("invalid pixel-format; got = %v, want = %v", pf, tt.pf)
+		}
+	}
+}
+
+func TestPixelFormat_String(t *testing.T) {
+	for _, tt := range []struct {
+		desc string
+		pf   PixelFormat
+		str  string
+	}{
+		{"8bpp-8depth",
+			PixelFormat{BPP: 8, Depth: 8, BigEndian: RFBTrue, TrueColor: RFBFalse},
+			"{ bpp: 8 depth: 8 big-endian: RFBTrue true-color: RFBFalse red-max: 0 green-max: 0 blue-max: 0 red-shift: 0 green-shift: 0 blue-shift: 0 }"},
+	} {
+		if got, want := tt.pf.String(), tt.str; got != want {
+			t.Errorf("%s: string() = %q, want = %q", tt.desc, got, want)
 		}
 	}
 }

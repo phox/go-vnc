@@ -13,6 +13,7 @@ import (
 	"github.com/kward/go-vnc/keys"
 	"github.com/kward/go-vnc/logging"
 	"github.com/kward/go-vnc/messages"
+	"github.com/kward/go-vnc/rfbflags"
 )
 
 // SetPixelFormatMessage holds the wire format message.
@@ -27,6 +28,10 @@ type SetPixelFormatMessage struct {
 //
 // See RFC 6143 Section 7.5.1
 func (c *ClientConn) SetPixelFormat(pf PixelFormat) error {
+	if logging.V(logging.FnDeclLevel) {
+		glog.Infof("ClientConn.%s", logging.FnNameWithArgs("%s", pf))
+	}
+
 	msg := SetPixelFormatMessage{
 		Msg: messages.SetPixelFormat,
 		PF:  pf,
@@ -36,7 +41,7 @@ func (c *ClientConn) SetPixelFormat(pf PixelFormat) error {
 	}
 
 	// Invalidate the color map.
-	if pf.TrueColor == RFBFalse {
+	if !rfbflags.IsTrueColor(pf.TrueColor) {
 		c.colorMap = [256]Color{}
 	}
 
@@ -55,8 +60,15 @@ type SetEncodingsMessage struct {
 // from the server. After calling this method, the encs slice given should not
 // be modified.
 //
+// TODO(kward:20170306) Fix bad practice of mixing of protocol and internal
+// state here.
+//
 // See RFC 6143 Section 7.5.2
 func (c *ClientConn) SetEncodings(encs Encodings) error {
+	if logging.V(logging.FnDeclLevel) {
+		glog.Infof("ClientConn.%s", logging.FnNameWithArgs("%s", encs))
+	}
+
 	// Make sure RawEncoding is supported.
 	haveRaw := false
 	for _, v := range encs {
@@ -99,7 +111,7 @@ func (c *ClientConn) SetEncodings(encs Encodings) error {
 // FramebufferUpdateRequestMessage holds the wire format message.
 type FramebufferUpdateRequestMessage struct {
 	Msg           messages.ClientMessage // message-type
-	Inc           uint8                  // incremental
+	Inc           rfbflags.RFBFlag       // incremental
 	X, Y          uint16                 // x-, y-position
 	Width, Height uint16                 // width, height
 }
@@ -108,7 +120,7 @@ type FramebufferUpdateRequestMessage struct {
 // time between the request and the actual framebuffer update being received.
 //
 // See RFC 6143 Section 7.5.3
-func (c *ClientConn) FramebufferUpdateRequest(inc uint8, x, y, w, h uint16) error {
+func (c *ClientConn) FramebufferUpdateRequest(inc rfbflags.RFBFlag, x, y, w, h uint16) error {
 	msg := FramebufferUpdateRequestMessage{messages.FramebufferUpdateRequest, inc, x, y, w, h}
 	return c.send(&msg)
 }
@@ -116,7 +128,7 @@ func (c *ClientConn) FramebufferUpdateRequest(inc uint8, x, y, w, h uint16) erro
 // KeyEventMessage holds the wire format message.
 type KeyEventMessage struct {
 	Msg      messages.ClientMessage // message-type
-	DownFlag uint8                  // down-flag
+	DownFlag rfbflags.RFBFlag       // down-flag
 	_        [2]byte                // padding
 	Key      keys.Key               // key
 }
@@ -134,14 +146,10 @@ const (
 // See RFC 6143 Section 7.5.4.
 func (c *ClientConn) KeyEvent(key keys.Key, down bool) error {
 	if logging.V(logging.FnDeclLevel) {
-		glog.Info(logging.FnNameWithArgs("%s, %t", key, down))
+		glog.Infof("ClientConnt.%s", logging.FnNameWithArgs("%s, %t", key, down))
 	}
 
-	downFlag := RFBFalse
-	if down {
-		downFlag = RFBTrue
-	}
-	msg := KeyEventMessage{messages.KeyEvent, downFlag, [2]byte{}, key}
+	msg := KeyEventMessage{messages.KeyEvent, rfbflags.BoolToRFBFlag(down), [2]byte{}, key}
 	if err := c.send(msg); err != nil {
 		return err
 	}

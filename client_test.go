@@ -13,6 +13,7 @@ import (
 	"github.com/kward/go-vnc/go/operators"
 	"github.com/kward/go-vnc/keys"
 	"github.com/kward/go-vnc/messages"
+	"github.com/kward/go-vnc/rfbflags"
 	"golang.org/x/net/context"
 )
 
@@ -33,8 +34,8 @@ func TestSetPixelFormat(t *testing.T) {
 				PF: PixelFormat{
 					BPP:        16,
 					Depth:      16,
-					BigEndian:  RFBTrue,
-					TrueColor:  RFBTrue,
+					BigEndian:  rfbflags.RFBTrue,
+					TrueColor:  rfbflags.RFBTrue,
 					RedMax:     uint16(math.Exp2(16)) - 1,
 					GreenMax:   uint16(math.Exp2(16)) - 1,
 					BlueMax:    uint16(math.Exp2(16)) - 1,
@@ -132,11 +133,11 @@ func TestSetEncodings(t *testing.T) {
 
 func TestFramebufferUpdateRequest(t *testing.T) {
 	tests := []struct {
-		inc        uint8
+		inc        rfbflags.RFBFlag
 		x, y, w, h uint16
 	}{
-		{RFBFalse, 10, 20, 30, 40},
-		{RFBTrue, 11, 21, 31, 41},
+		{rfbflags.RFBFalse, 10, 20, 30, 40},
+		{rfbflags.RFBTrue, 11, 21, 31, 41},
 	}
 
 	mockConn := &MockConn{}
@@ -236,13 +237,7 @@ func TestKeyEvent(t *testing.T) {
 		if got, want := req.Msg, messages.KeyEvent; got != want {
 			t.Errorf("incorrect message-type; got = %v, want = %v", got, want)
 		}
-		var down bool
-		switch req.DownFlag {
-		case RFBTrue:
-			down = PressKey
-		case RFBFalse:
-			down = ReleaseKey
-		}
+		down := rfbflags.ToBool(req.DownFlag)
 		if got, want := down, tt.down; got != want {
 			t.Errorf("incorrect down-flag; got = %v, want = %v", got, want)
 		}

@@ -12,6 +12,7 @@ import (
 	"github.com/kward/go-vnc/encodings"
 	"github.com/kward/go-vnc/logging"
 	"github.com/kward/go-vnc/messages"
+	"github.com/kward/go-vnc/rfbflags"
 )
 
 // ServerMessage is the interface satisfied by server messages.
@@ -344,7 +345,7 @@ func (c *Color) Marshal() ([]byte, error) {
 
 	order := c.pf.order()
 	pixel := c.cmIndex
-	if c.pf.TrueColor == RFBTrue {
+	if rfbflags.IsTrueColor(c.pf.TrueColor) {
 		pixel = uint32(c.R) << c.pf.RedShift
 		pixel |= uint32(c.G) << c.pf.GreenShift
 		pixel |= uint32(c.B) << c.pf.BlueShift
@@ -388,7 +389,7 @@ func (c *Color) Unmarshal(data []byte) error {
 		pixel = order.Uint32(data)
 	}
 
-	if c.pf.TrueColor == RFBTrue {
+	if rfbflags.IsTrueColor(c.pf.TrueColor) {
 		c.R = uint16((pixel >> c.pf.RedShift) & uint32(c.pf.RedMax))
 		c.G = uint16((pixel >> c.pf.GreenShift) & uint32(c.pf.GreenMax))
 		c.B = uint16((pixel >> c.pf.BlueShift) & uint32(c.pf.BlueMax))

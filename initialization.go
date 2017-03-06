@@ -3,8 +3,11 @@
 package vnc
 
 import (
+	"io"
+
 	"github.com/golang/glog"
 	"github.com/kward/go-vnc/logging"
+	"github.com/kward/go-vnc/rfbflags"
 )
 
 // clientInit implements §7.3.1 ClientInit.
@@ -13,10 +16,7 @@ func (c *ClientConn) clientInit() error {
 		glog.Info(logging.FnName())
 	}
 
-	sharedFlag := RFBTrue
-	if c.config.Exclusive {
-		sharedFlag = RFBFalse
-	}
+	sharedFlag := rfbflags.BoolToRFBFlag(!c.config.Exclusive)
 	if logging.V(logging.ResultLevel) {
 		glog.Infof("sharedFlag: %d", sharedFlag)
 	}
@@ -30,35 +30,58 @@ func (c *ClientConn) clientInit() error {
 	return nil
 }
 
+// ServerInit message sent after server receives a ClientInit message.
+// https://tools.ietf.org/html/rfc6143#section-7.3.2
+type ServerInit struct {
+	FBWidth, FBHeight uint16
+	PixelFormat       PixelFormat
+	NameLength        uint32
+	// Name is of variable length, and must be read separately.
+}
+
+const serverInitLen = 24 // Not including Name.
+
+// Verify that interfaces are honored.
+var _ Unmarshaler = (*ServerInit)(nil)
+
+// Read implements
+func (m *ServerInit) Read(r io.Reader) error {
+	buf := make([]byte, serverInitLen)
+	if _, err := io.ReadAtLeast(r, buf, serverInitLen); err != nil {
+		return err
+	}
+	return m.Unmarshal(buf)
+}
+
+func (m *ServerInit) Unmarshal(data []byte) error {
+	buf := NewBuffer(data)
+	var msg ServerInit
+	if err := buf.Read(&msg); err != nil {
+		return err
+	}
+	*m = msg
+	return nil
+}
+
 // serverInit implements §7.3.2 ServerInit.
 func (c *ClientConn) serverInit() error {
 	if logging.V(logging.FnDeclLevel) {
 		glog.Info(logging.FnName())
 	}
 
-	var width, height uint16
-	if err := c.receive(&width); err != nil {
-		return err
-	}
-	c.setFramebufferWidth(width)
-	if err := c.receive(&height); err != nil {
-		return err
-	}
-	c.setFramebufferHeight(height)
-
-	if err := c.pixelFormat.Read(c.c); err != nil {
-		return err
+	var msg ServerInit
+	if err := msg.Read(c.c); err != nil {
+		return Errorf("failure reading ServerInit message; %v", err)
 	}
 	if logging.V(logging.ResultLevel) {
-		glog.Infof("pixelFormat: %v", c.pixelFormat)
+		glog.Infof("ServerInit message: %v", msg)
 	}
 
-	var nameLength uint32
-	if err := c.receive(&nameLength); err != nil {
-		return err
-	}
+	c.setFramebufferWidth(msg.FBWidth)
+	c.setFramebufferHeight(msg.FBHeight)
+	c.pixelFormat = msg.PixelFormat
 
-	name := make([]uint8, nameLength)
+	name := make([]uint8, msg.NameLength)
 	if err := c.receive(&name); err != nil {
 		return err
 	}

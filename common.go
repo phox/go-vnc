@@ -5,27 +5,29 @@ package vnc
 import (
 	"bytes"
 	"encoding/binary"
+	"fmt"
 	"time"
-)
-
-const (
-	RFBFalse = uint8(iota)
-	RFBTrue
 )
 
 // VNCError implements error interface.
 type VNCError struct {
-	s string
+	desc string
 }
 
 // NewVNCError returns a custom VNCError error.
-func NewVNCError(s string) error {
-	return &VNCError{s}
+func NewVNCError(desc string) error {
+	return &VNCError{desc}
 }
 
 // Error returns an VNCError as a string.
 func (e VNCError) Error() string {
-	return e.s
+	return e.desc
+}
+
+func Errorf(format string, a ...interface{}) error {
+	return &VNCError{
+		desc: fmt.Sprintf(format, a...),
+	}
 }
 
 var settleDuration = 25 * time.Millisecond

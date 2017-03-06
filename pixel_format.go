@@ -7,6 +7,8 @@ import (
 	"fmt"
 	"io"
 	"math"
+
+	"github.com/kward/go-vnc/rfbflags"
 )
 
 var (
@@ -17,37 +19,39 @@ var (
 
 // PixelFormat describes the way a pixel is formatted for a VNC connection.
 type PixelFormat struct {
-	BPP                             uint8   // bits-per-pixel
-	Depth                           uint8   // depth
-	BigEndian                       uint8   // big-endian-flag
-	TrueColor                       uint8   // true-color-flag
-	RedMax, GreenMax, BlueMax       uint16  // red-, green-, blue-max (2^BPP-1)
-	RedShift, GreenShift, BlueShift uint8   // red-, green-, blue-shift
-	_                               [3]byte // padding
+	BPP                             uint8            // bits-per-pixel
+	Depth                           uint8            // depth
+	BigEndian                       rfbflags.RFBFlag // big-endian-flag
+	TrueColor                       rfbflags.RFBFlag // true-color-flag
+	RedMax, GreenMax, BlueMax       uint16           // red-, green-, blue-max (2^BPP-1)
+	RedShift, GreenShift, BlueShift uint8            // red-, green-, blue-shift
+	_                               [3]byte          // padding
 }
+
+const pixelFormatLen = 16
+
+// Verify that interfaces are honored.
+var _ fmt.Stringer = (*PixelFormat)(nil)
+var _ MarshalerUnmarshaler = (*PixelFormat)(nil)
 
 // NewPixelFormat returns a populated PixelFormat structure.
 func NewPixelFormat(bpp uint8) PixelFormat {
+	bigEndian := rfbflags.RFBTrue
 	rgbMax := uint16(math.Exp2(float64(bpp))) - 1
 	var (
-		tc         uint8 = RFBTrue
+		tc         = rfbflags.RFBTrue
 		rs, gs, bs uint8
 	)
 	switch bpp {
 	case 8:
-		tc = RFBFalse
+		tc = rfbflags.RFBFalse
 		rs, gs, bs = 0, 0, 0
 	case 16:
 		rs, gs, bs = 0, 4, 8
 	case 32:
 		rs, gs, bs = 0, 8, 16
 	}
-	return PixelFormat{bpp, bpp, RFBTrue, tc, rgbMax, rgbMax, rgbMax, rs, gs, bs, [3]byte{}}
-}
-
-// Len returns the length of a PixelFormat struct.
-func (pf PixelFormat) Len() int {
-	return 16
+	return PixelFormat{bpp, bpp, bigEndian, tc, rgbMax, rgbMax, rgbMax, rs, gs, bs, [3]byte{}}
 }
 
 // Marshal implements the Marshaler interface.
@@ -79,8 +83,8 @@ func (pf PixelFormat) Marshal() ([]byte, error) {
 
 // Read reads from an io.Reader, and populates the PixelFormat.
 func (pf *PixelFormat) Read(r io.Reader) error {
-	buf := make([]byte, pf.Len())
-	if _, err := io.ReadAtLeast(r, buf, len(buf)); err != nil {
+	buf := make([]byte, pixelFormatLen)
+	if _, err := io.ReadAtLeast(r, buf, pixelFormatLen); err != nil {
 		return err
 	}
 	return pf.Unmarshal(buf)
@@ -94,16 +98,22 @@ func (pf *PixelFormat) Unmarshal(data []byte) error {
 	if err := buf.Read(&msg); err != nil {
 		return err
 	}
-	if msg.TrueColor != RFBFalse {
-		msg.TrueColor = RFBTrue // Convert all non-zero values to our constant value.
+	if rfbflags.IsTrueColor(msg.TrueColor) {
+		msg.TrueColor = rfbflags.RFBTrue // Use our constant value.
 	}
 	*pf = msg
 
 	return nil
 }
 
+// String implements the fmt.Stringer interface.
+func (pf PixelFormat) String() string {
+	return fmt.Sprintf("{ bpp: %d depth: %d big-endian: %s true-color: %s red-max: %d green-max: %d blue-max: %d red-shift: %d green-shift: %d blue-shift: %d }",
+		pf.BPP, pf.Depth, pf.BigEndian, pf.TrueColor, pf.RedMax, pf.GreenMax, pf.BlueMax, pf.RedShift, pf.GreenShift, pf.BlueShift)
+}
+
 func (pf PixelFormat) order() binary.ByteOrder {
-	if pf.BigEndian == RFBTrue {
+	if rfbflags.IsBigEndian(pf.BigEndian) {
 		return binary.BigEndian
 	}
 	return binary.LittleEndian
