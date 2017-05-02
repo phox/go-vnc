@@ -92,6 +92,7 @@ const (
 	T
 	U
 	V
+	W
 	X
 	Y
 	Z
@@ -123,6 +124,7 @@ const (
 	SmallT
 	SmallU
 	SmallV
+	SmallW
 	SmallX
 	SmallY
 	SmallZ
