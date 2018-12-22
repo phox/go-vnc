@@ -114,6 +114,8 @@ type ClientConn struct {
 	config          *ClientConfig
 	protocolVersion string
 
+	connTerminated bool
+
 	// If the pixel format uses a color map, then this is the color
 	// map that is used. This should not be modified directly, since
 	// the data comes from the server.
@@ -144,10 +146,11 @@ type ClientConn struct {
 
 func NewClientConn(c net.Conn, cfg *ClientConfig) *ClientConn {
 	return &ClientConn{
-		c:           c,
-		config:      cfg,
-		encodings:   Encodings{&RawEncoding{}},
-		pixelFormat: PixelFormat32bit,
+		c:              c,
+		connTerminated: false,
+		config:         cfg,
+		encodings:      Encodings{&RawEncoding{}},
+		pixelFormat:    PixelFormat32bit,
 		metrics: map[string]metrics.Metric{
 			"bytes-received": &metrics.Gauge{},
 			"bytes-sent":     &metrics.Gauge{},
@@ -158,6 +161,7 @@ func NewClientConn(c net.Conn, cfg *ClientConfig) *ClientConn {
 // Close a connection to a VNC server.
 func (c *ClientConn) Close() error {
 	log.Print("VNC Client connection closed.")
+	c.connTerminated = true
 	return c.c.Close()
 }
 
@@ -222,7 +226,9 @@ func (c *ClientConn) ListenAndHandle() error {
 	for {
 		var messageType messages.ServerMessage
 		if err := c.receive(&messageType); err != nil {
-			log.Print("error: reading from server")
+			if !c.connTerminated {
+				log.Print("error: reading from server")
+			}
 			break
 		}
 		if logging.V(logging.ResultLevel) {
