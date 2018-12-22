@@ -210,7 +210,6 @@ func (c *ClientConn) ListenAndHandle() error {
 	if logging.V(logging.FnDeclLevel) {
 		glog.Info(logging.FnName())
 	}
-	defer c.Close()
 
 	if c.config.ServerMessages == nil {
 		return NewVNCError("Client config error: ServerMessages undefined")
@@ -251,6 +250,7 @@ func (c *ClientConn) ListenAndHandle() error {
 		c.config.ServerMessageCh <- parsedMsg
 	}
 
+	log.Print("ListenAndHandle finished")
 	return nil
 }
 
