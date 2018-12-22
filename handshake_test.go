@@ -46,7 +46,7 @@ func TestParseProtocolVersion(t *testing.T) {
 		if !tt.ok {
 			continue
 		}
-		// TODO(madddi): validate VNCError thrown.
+		// TODO(kward): validate VNCError thrown.
 		if got, want := major, tt.major; got != want {
 			t.Errorf("%d: incorrect major version; got = %v, want = %v", i, got, want)
 			continue

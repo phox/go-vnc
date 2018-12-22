@@ -24,7 +24,7 @@ func (c *ClientConn) clientInit() error {
 		return err
 	}
 
-	// TODO(madddi)20170226): VENUE responds with some sort of shared flag
+	// TODO(kward)20170226): VENUE responds with some sort of shared flag
 	// response, which includes the VENUE name and IPs. Handle this?
 
 	return nil

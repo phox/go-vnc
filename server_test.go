@@ -54,12 +54,12 @@ func TestRectangle_Unmarshal(t *testing.T) {
 	}
 }
 
-// TODO(madddi): need to read encodings in addition to rectangles.
+// TODO(kward): need to read encodings in addition to rectangles.
 func TestFramebufferUpdate(t *testing.T) {
 	mockConn := &MockConn{}
 	conn := NewClientConn(mockConn, &ClientConfig{})
 	// Use empty PixelFormat so that the BPP is zero, and rects won't be read.
-	// TODO(madddi): give some real rectangles so this hack isn't necessary.
+	// TODO(kward): give some real rectangles so this hack isn't necessary.
 	conn.pixelFormat = PixelFormat{}
 
 	for _, tt := range []struct {

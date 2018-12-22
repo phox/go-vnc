@@ -1,6 +1,6 @@
 package vnc
 
-// TODO(madddi): Fully test the encodings.
+// TODO(kward): Fully test the encodings.
 
 import (
 	"testing"

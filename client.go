@@ -60,7 +60,7 @@ type SetEncodingsMessage struct {
 // from the server. After calling this method, the encs slice given should not
 // be modified.
 //
-// TODO(madddi:20170306) Fix bad practice of mixing of protocol and internal
+// TODO(kward:20170306) Fix bad practice of mixing of protocol and internal
 // state here.
 //
 // See RFC 6143 Section 7.5.2
