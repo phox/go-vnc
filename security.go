@@ -6,7 +6,7 @@ import (
 	"crypto/des"
 
 	"github.com/golang/glog"
-	"github.com/kward/go-vnc/logging"
+	"github.com/madddi/go-vnc/logging"
 )
 
 const (

@@ -3,8 +3,8 @@ package vnc
 import (
 	"testing"
 
-	"github.com/kward/go-vnc/encodings"
-	"github.com/kward/go-vnc/go/operators"
+	"github.com/madddi/go-vnc/encodings"
+	"github.com/madddi/go-vnc/go/operators"
 )
 
 func TestRectangle_Marshal(t *testing.T) {
@@ -54,12 +54,12 @@ func TestRectangle_Unmarshal(t *testing.T) {
 	}
 }
 
-// TODO(kward): need to read encodings in addition to rectangles.
+// TODO(madddi): need to read encodings in addition to rectangles.
 func TestFramebufferUpdate(t *testing.T) {
 	mockConn := &MockConn{}
 	conn := NewClientConn(mockConn, &ClientConfig{})
 	// Use empty PixelFormat so that the BPP is zero, and rects won't be read.
-	// TODO(kward): give some real rectangles so this hack isn't necessary.
+	// TODO(madddi): give some real rectangles so this hack isn't necessary.
 	conn.pixelFormat = PixelFormat{}
 
 	for _, tt := range []struct {

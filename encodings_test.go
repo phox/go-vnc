@@ -1,12 +1,12 @@
 package vnc
 
-// TODO(kward): Fully test the encodings.
+// TODO(madddi): Fully test the encodings.
 
 import (
 	"testing"
 
-	"github.com/kward/go-vnc/encodings"
-	"github.com/kward/go-vnc/go/operators"
+	"github.com/madddi/go-vnc/encodings"
+	"github.com/madddi/go-vnc/go/operators"
 )
 
 func TestEncoding_Marshal(t *testing.T) {
