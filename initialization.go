@@ -6,8 +6,8 @@ import (
 	"io"
 
 	"github.com/golang/glog"
-	"github.com/madddi/go-vnc/logging"
-	"github.com/madddi/go-vnc/rfbflags"
+	"github.com/alexsnet/go-vnc/logging"
+	"github.com/alexsnet/go-vnc/rfbflags"
 )
 
 // clientInit implements §7.3.1 ClientInit.

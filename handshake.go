@@ -6,7 +6,7 @@ import (
 	"fmt"
 
 	"github.com/golang/glog"
-	"github.com/madddi/go-vnc/logging"
+	"github.com/alexsnet/go-vnc/logging"
 
 	"golang.org/x/net/context"
 )

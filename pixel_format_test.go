@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"testing"
 
-	"github.com/madddi/go-vnc/go/operators"
-	"github.com/madddi/go-vnc/rfbflags"
+	"github.com/alexsnet/go-vnc/go/operators"
+	"github.com/alexsnet/go-vnc/rfbflags"
 )
 
 const (

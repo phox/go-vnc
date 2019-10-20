@@ -11,9 +11,9 @@ import (
 	"reflect"
 
 	"github.com/golang/glog"
-	"github.com/madddi/go-vnc/go/metrics"
-	"github.com/madddi/go-vnc/logging"
-	"github.com/madddi/go-vnc/messages"
+	"github.com/alexsnet/go-vnc/go/metrics"
+	"github.com/alexsnet/go-vnc/logging"
+	"github.com/alexsnet/go-vnc/messages"
 	"golang.org/x/net/context"
 )
 

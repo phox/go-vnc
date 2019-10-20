@@ -12,14 +12,14 @@ This library implements [RFC 6143][RFC6143] -- The Remote Framebuffer Protocol
 1. Download software and supporting packages.
 
     ```
-    $ go get github.com/madddi/go-vnc
+    $ go get github.com/alexsnet/go-vnc
     $ go get golang.org/x/net
     ```
 
 ## Usage
 Sample code usage is available in the GoDoc.
 
-- Connect and listen to server messages: <https://godoc.org/github.com/madddi/go-vnc#example-Connect>
+- Connect and listen to server messages: <https://godoc.org/github.com/alexsnet/go-vnc#example-Connect>
 
 The source code is laid out such that the files match the document sections:
 
@@ -40,8 +40,8 @@ There are two additional files that provide everything else:
 <!--- Links -->
 [RFC6143]: http://tools.ietf.org/html/rfc6143
 
-[CIProject]: https://travis-ci.org/madddi/go-vnc
-[CIStatus]: https://travis-ci.org/madddi/go-vnc.png?branch=master
+[CIProject]: https://travis-ci.org/alexsnet/go-vnc
+[CIStatus]: https://travis-ci.org/alexsnet/go-vnc.png?branch=master
 
-[GoDoc]: https://godoc.org/github.com/madddi/go-vnc
-[GoDocStatus]: https://godoc.org/github.com/madddi/go-vnc?status.svg
+[GoDoc]: https://godoc.org/github.com/alexsnet/go-vnc
+[GoDocStatus]: https://godoc.org/github.com/alexsnet/go-vnc?status.svg

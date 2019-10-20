@@ -10,11 +10,11 @@ import (
 	"net/http"
 )
 
-// TODO(madddi): Add the following stats:
+// TODO(alexsnet): Add the following stats:
 // - MultiLevel
 //   - MinuteHour
 // - VariableMap
-// TODO(madddi): Consider locking.
+// TODO(alexsnet): Consider locking.
 
 type Metric interface {
 	// Adjust increments or decrements the metric value.

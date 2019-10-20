@@ -9,10 +9,10 @@ import (
 	"image"
 
 	"github.com/golang/glog"
-	"github.com/madddi/go-vnc/encodings"
-	"github.com/madddi/go-vnc/logging"
-	"github.com/madddi/go-vnc/messages"
-	"github.com/madddi/go-vnc/rfbflags"
+	"github.com/alexsnet/go-vnc/encodings"
+	"github.com/alexsnet/go-vnc/logging"
+	"github.com/alexsnet/go-vnc/messages"
+	"github.com/alexsnet/go-vnc/rfbflags"
 )
 
 // ServerMessage is the interface satisfied by server messages.
