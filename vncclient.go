@@ -10,10 +10,10 @@ import (
 	"net"
 	"reflect"
 
-	"github.com/golang/glog"
 	"github.com/alexsnet/go-vnc/go/metrics"
 	"github.com/alexsnet/go-vnc/logging"
 	"github.com/alexsnet/go-vnc/messages"
+	"github.com/golang/glog"
 	"golang.org/x/net/context"
 )
 
@@ -110,7 +110,7 @@ func NewClientConfig(p string) *ClientConfig {
 
 // The ClientConn type holds client connection information.
 type ClientConn struct {
-	c               net.Conn
+	Conn            net.Conn
 	config          *ClientConfig
 	protocolVersion string
 
@@ -146,7 +146,7 @@ type ClientConn struct {
 
 func NewClientConn(c net.Conn, cfg *ClientConfig) *ClientConn {
 	return &ClientConn{
-		c:              c,
+		Conn:           c,
 		connTerminated: false,
 		config:         cfg,
 		encodings:      Encodings{&RawEncoding{}},
@@ -162,7 +162,7 @@ func NewClientConn(c net.Conn, cfg *ClientConfig) *ClientConn {
 func (c *ClientConn) Close() error {
 	log.Print("VNC Client connection closed.")
 	c.connTerminated = true
-	return c.c.Close()
+	return c.Conn.Close()
 }
 
 // DesktopName returns the server provided desktop name.
@@ -262,7 +262,7 @@ func (c *ClientConn) ListenAndHandle() error {
 
 // receive a packet from the network.
 func (c *ClientConn) receive(data interface{}) error {
-	if err := binary.Read(c.c, binary.BigEndian, data); err != nil {
+	if err := binary.Read(c.Conn, binary.BigEndian, data); err != nil {
 		return err
 	}
 	c.metrics["bytes-received"].Adjust(int64(binary.Size(data)))
@@ -282,7 +282,7 @@ func (c *ClientConn) receiveN(data interface{}, n int) error {
 	case *[]uint8:
 		var v uint8
 		for i := 0; i < n; i++ {
-			if err := binary.Read(c.c, binary.BigEndian, &v); err != nil {
+			if err := binary.Read(c.Conn, binary.BigEndian, &v); err != nil {
 				return err
 			}
 			slice := data.(*[]uint8)
@@ -291,7 +291,7 @@ func (c *ClientConn) receiveN(data interface{}, n int) error {
 	case *[]int32:
 		var v int32
 		for i := 0; i < n; i++ {
-			if err := binary.Read(c.c, binary.BigEndian, &v); err != nil {
+			if err := binary.Read(c.Conn, binary.BigEndian, &v); err != nil {
 				return err
 			}
 			slice := data.(*[]int32)
@@ -300,7 +300,7 @@ func (c *ClientConn) receiveN(data interface{}, n int) error {
 	case *bytes.Buffer:
 		var v byte
 		for i := 0; i < n; i++ {
-			if err := binary.Read(c.c, binary.BigEndian, &v); err != nil {
+			if err := binary.Read(c.Conn, binary.BigEndian, &v); err != nil {
 				return err
 			}
 			buf := data.(*bytes.Buffer)
@@ -318,7 +318,7 @@ func (c *ClientConn) send(data interface{}) error {
 	if logging.V(logging.SpamLevel) {
 		glog.Infof("ClientConn.%s", logging.FnNameWithArgs("%v", data))
 	}
-	if err := binary.Write(c.c, binary.BigEndian, data); err != nil {
+	if err := binary.Write(c.Conn, binary.BigEndian, data); err != nil {
 		return err
 	}
 	c.metrics["bytes-sent"].Adjust(int64(binary.Size(data)))

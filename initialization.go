@@ -5,9 +5,9 @@ package vnc
 import (
 	"io"
 
-	"github.com/golang/glog"
 	"github.com/alexsnet/go-vnc/logging"
 	"github.com/alexsnet/go-vnc/rfbflags"
+	"github.com/golang/glog"
 )
 
 // clientInit implements §7.3.1 ClientInit.
@@ -70,7 +70,7 @@ func (c *ClientConn) serverInit() error {
 	}
 
 	var msg ServerInit
-	if err := msg.Read(c.c); err != nil {
+	if err := msg.Read(c.Conn); err != nil {
 		return Errorf("failure reading ServerInit message; %v", err)
 	}
 	if logging.V(logging.ResultLevel) {

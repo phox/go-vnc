@@ -105,7 +105,7 @@ func TestReceiveN(t *testing.T) {
 		default:
 			d = tt.data
 		}
-		if err := binary.Write(conn.c, binary.BigEndian, d); err != nil {
+		if err := binary.Write(conn.Conn, binary.BigEndian, d); err != nil {
 			t.Errorf("unexpected error: %v", err)
 		}
 

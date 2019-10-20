@@ -162,7 +162,7 @@ func TestSecurityHandshake33(t *testing.T) {
 			}
 		}
 		if tt.secType == uint32(secTypeVNCAuth) {
-			if err := writeVNCAuthChallenge(conn.c); err != nil {
+			if err := writeVNCAuthChallenge(conn.Conn); err != nil {
 				t.Fatalf("error sending VNCAuth challenge: %v", err)
 			}
 		}
@@ -194,7 +194,7 @@ func TestSecurityHandshake33(t *testing.T) {
 
 		// Validate client response.
 		if tt.secType == uint32(secTypeVNCAuth) {
-			if err := readVNCAuthResponse(conn.c); err != nil {
+			if err := readVNCAuthResponse(conn.Conn); err != nil {
 				t.Fatalf("%v: error reading VNCAuth response: %v", i, err)
 			}
 		}
@@ -269,7 +269,7 @@ func TestSecurityHandshake38(t *testing.T) {
 			}
 		}
 		if tt.secType == secTypeVNCAuth {
-			if err := writeVNCAuthChallenge(conn.c); err != nil {
+			if err := writeVNCAuthChallenge(conn.Conn); err != nil {
 				t.Fatalf("error sending VNCAuth challenge: %s", err)
 			}
 		}
@@ -310,7 +310,7 @@ func TestSecurityHandshake38(t *testing.T) {
 			t.Errorf("%d: secType not stored; got = %v, want = %v", i, got, want)
 		}
 		if tt.secType == secTypeVNCAuth {
-			if err := readVNCAuthResponse(conn.c); err != nil {
+			if err := readVNCAuthResponse(conn.Conn); err != nil {
 				t.Fatalf("%d: error reading VNCAuth response: %s", i, err)
 			}
 		}
