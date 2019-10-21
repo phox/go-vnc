@@ -6,16 +6,25 @@ import (
 	"bytes"
 	"encoding/binary"
 	"fmt"
+	"io"
 	"log"
 	"net"
 	"reflect"
 
 	"github.com/alexsnet/go-vnc/go/metrics"
-	"github.com/alexsnet/go-vnc/logging"
 	"github.com/alexsnet/go-vnc/messages"
-	"github.com/golang/glog"
 	"golang.org/x/net/context"
 )
+
+type ReadProxy struct {
+	or io.Reader
+}
+
+func (rp *ReadProxy) Read(p []byte) (n int, err error) {
+	n, err = rp.or.Read(p)
+	fmt.Printf("Read: %v\n", p)
+	return
+}
 
 // Connect negotiates a connection to a VNC server.
 func Connect(ctx context.Context, c net.Conn, cfg *ClientConfig) (*ClientConn, error) {
@@ -52,6 +61,7 @@ func Connect(ctx context.Context, c net.Conn, cfg *ClientConfig) (*ClientConn, e
 		conn.Close()
 		return nil, Errorf("failure calling SetEncodings; %s", err)
 	}
+
 	pf := conn.pixelFormat
 	if err := conn.SetPixelFormat(pf); err != nil {
 		conn.Close()
@@ -72,6 +82,9 @@ type ClientConfig struct {
 
 	// Password for servers that require authentication.
 	Password string
+
+	// Logger
+	Logger *log.Logger
 
 	// Exclusive determines whether the connection is shared with other
 	// clients. If true, then all other clients connected will be
@@ -97,6 +110,7 @@ func NewClientConfig(p string) *ClientConfig {
 		Auth: []ClientAuth{
 			&ClientAuthNone{},
 			&ClientAuthVNC{p},
+			&ClientAuthVeNCryptAuth{},
 		},
 		Password: p,
 		ServerMessages: []ServerMessage{
@@ -115,6 +129,8 @@ type ClientConn struct {
 	protocolVersion string
 
 	connTerminated bool
+
+	log *log.Logger
 
 	// If the pixel format uses a color map, then this is the color
 	// map that is used. This should not be modified directly, since
@@ -140,6 +156,9 @@ type ClientConn struct {
 	// SetPixelFormat method.
 	pixelFormat PixelFormat
 
+	// Security types, supported by the server
+	securityTypes []uint8
+
 	// Track metrics on system performance.
 	metrics map[string]metrics.Metric
 }
@@ -149,6 +168,7 @@ func NewClientConn(c net.Conn, cfg *ClientConfig) *ClientConn {
 		Conn:           c,
 		connTerminated: false,
 		config:         cfg,
+		log:            cfg.Logger,
 		encodings:      Encodings{&RawEncoding{}},
 		pixelFormat:    PixelFormat32bit,
 		metrics: map[string]metrics.Metric{
@@ -160,7 +180,9 @@ func NewClientConn(c net.Conn, cfg *ClientConfig) *ClientConn {
 
 // Close a connection to a VNC server.
 func (c *ClientConn) Close() error {
-	log.Print("VNC Client connection closed.")
+	if c.log != nil {
+		c.log.Println("VNC Client connection closed.")
+	}
 	c.connTerminated = true
 	return c.Conn.Close()
 }
@@ -172,8 +194,8 @@ func (c *ClientConn) DesktopName() string {
 
 // setDesktopName stores the server provided desktop name.
 func (c *ClientConn) setDesktopName(name string) {
-	if logging.V(logging.ResultLevel) {
-		glog.Infof("desktopName: %s", name)
+	if c.log != nil {
+		c.log.Printf("desktopName: %s\n", name)
 	}
 	c.desktopName = name
 }
@@ -190,8 +212,8 @@ func (c *ClientConn) FramebufferHeight() uint16 {
 
 // setFramebufferHeight stores the server provided framebuffer height.
 func (c *ClientConn) setFramebufferHeight(height uint16) {
-	if logging.V(logging.ResultLevel) {
-		glog.Infof("height: %d", height)
+	if c.log != nil {
+		c.log.Printf("height: %d", height)
 	}
 	c.fbHeight = height
 }
@@ -203,18 +225,14 @@ func (c *ClientConn) FramebufferWidth() uint16 {
 
 // setFramebufferWidth stores the server provided framebuffer width.
 func (c *ClientConn) setFramebufferWidth(width uint16) {
-	if logging.V(logging.ResultLevel) {
-		glog.Infof("width: %d", width)
+	if c.log != nil {
+		c.log.Printf("width: %d", width)
 	}
 	c.fbWidth = width
 }
 
 // ListenAndHandle listens to a VNC server and handles server messages.
 func (c *ClientConn) ListenAndHandle() error {
-	if logging.V(logging.FnDeclLevel) {
-		glog.Info(logging.FnName())
-	}
-
 	if c.config.ServerMessages == nil {
 		return NewVNCError("Client config error: ServerMessages undefined")
 	}
@@ -231,8 +249,8 @@ func (c *ClientConn) ListenAndHandle() error {
 			}
 			break
 		}
-		if logging.V(logging.ResultLevel) {
-			glog.Infof("message-type: %s", messageType)
+		if c.log != nil {
+			c.log.Printf("message-type: %s", messageType)
 		}
 
 		msg, ok := serverMessages[messageType]
@@ -271,9 +289,6 @@ func (c *ClientConn) receive(data interface{}) error {
 
 // receiveN receives N packets from the network.
 func (c *ClientConn) receiveN(data interface{}, n int) error {
-	if logging.V(logging.FnDeclLevel) {
-		glog.Infof("ClientConn.%s", logging.FnName())
-	}
 	if n == 0 {
 		return nil
 	}
@@ -315,12 +330,10 @@ func (c *ClientConn) receiveN(data interface{}, n int) error {
 
 // send a packet to the network.
 func (c *ClientConn) send(data interface{}) error {
-	if logging.V(logging.SpamLevel) {
-		glog.Infof("ClientConn.%s", logging.FnNameWithArgs("%v", data))
-	}
 	if err := binary.Write(c.Conn, binary.BigEndian, data); err != nil {
 		return err
 	}
+
 	c.metrics["bytes-sent"].Adjust(int64(binary.Size(data)))
 	return nil
 }
