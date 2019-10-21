@@ -5,9 +5,6 @@ package vnc
 import (
 	"fmt"
 
-	"github.com/golang/glog"
-	"github.com/alexsnet/go-vnc/logging"
-
 	"golang.org/x/net/context"
 )
 
@@ -40,18 +37,14 @@ const (
 
 // protocolVersionHandshake implements §7.1.1 ProtocolVersion Handshake.
 func (c *ClientConn) protocolVersionHandshake(ctx context.Context) error {
-	if logging.V(logging.FnDeclLevel) {
-		glog.Info(logging.FnName())
-	}
-
 	var protocolVersion [pvLen]byte
 
 	// Read the ProtocolVersion message sent by the server.
 	if err := c.receive(&protocolVersion); err != nil {
 		return err
 	}
-	if logging.V(logging.ResultLevel) {
-		glog.Infof("protocolVersion: %s", protocolVersion)
+	if c.log != nil {
+		c.log.Printf("protocolVersion: %s", protocolVersion)
 	}
 
 	major, minor, err := parseProtocolVersion(protocolVersion[:])
@@ -79,8 +72,8 @@ func (c *ClientConn) protocolVersionHandshake(ctx context.Context) error {
 		}
 	}
 
-	if logging.V(logging.ResultLevel) {
-		glog.Infof("supported protocolVersion: %s", pv)
+	if c.log != nil {
+		c.log.Printf("supported protocolVersion: %s", pv)
 	}
 	c.protocolVersion = pv
 
@@ -94,10 +87,6 @@ func (c *ClientConn) protocolVersionHandshake(ctx context.Context) error {
 
 // securityHandshake implements §7.1.2 Security Handshake.
 func (c *ClientConn) securityHandshake() error {
-	if logging.V(logging.FnDeclLevel) {
-		glog.Infof(logging.FnName())
-	}
-
 	switch c.protocolVersion {
 	case PROTO_VERS_3_3:
 		if err := c.securityHandshake33(); err != nil {
@@ -115,9 +104,6 @@ func (c *ClientConn) securityHandshake() error {
 }
 
 func (c *ClientConn) securityHandshake33() error {
-	if logging.V(logging.FnDeclLevel) {
-		glog.Infof(logging.FnName())
-	}
 
 	var secType uint32
 	if err := c.receive(&secType); err != nil {
@@ -148,9 +134,6 @@ func (c *ClientConn) securityHandshake33() error {
 }
 
 func (c *ClientConn) securityHandshake38() error {
-	if logging.V(logging.FnDeclLevel) {
-		glog.Info(logging.FnName())
-	}
 
 	// Determine server supported security types.
 	var numSecurityTypes uint8
@@ -168,9 +151,7 @@ func (c *ClientConn) securityHandshake38() error {
 	if err := c.receive(&securityTypes); err != nil {
 		return err
 	}
-	if logging.V(logging.ResultLevel) {
-		glog.Infof("securityTypes: %v", securityTypes)
-	}
+	c.securityTypes = securityTypes
 
 	// Choose client security type.
 	// TODO(kward): try "better" security types first.
@@ -188,21 +169,21 @@ FindAuth:
 	if auth == nil {
 		return NewVNCError(fmt.Sprintf("Security handshake failed; no suitable auth schemes found; server supports: %#v", securityTypes))
 	}
+
 	if err := c.send(auth.SecurityType()); err != nil {
 		return err
 	}
+
 	c.config.secType = auth.SecurityType()
 	if err := auth.Handshake(c); err != nil {
 		return err
 	}
+
 	return nil
 }
 
 // securityResultHandshake implements §7.1.3 SecurityResult Handshake.
 func (c *ClientConn) securityResultHandshake() error {
-	if logging.V(logging.FnDeclLevel) {
-		glog.Info(logging.FnName())
-	}
 
 	if c.config.secType == secTypeNone {
 		return nil
@@ -229,10 +210,6 @@ func (c *ClientConn) securityResultHandshake() error {
 
 // TODO(kward): need a context for timeout
 func (c *ClientConn) readErrorReason() (string, error) {
-	if logging.V(logging.FnDeclLevel) {
-		glog.Info(logging.FnName())
-	}
-
 	var reasonLen uint32
 	if err := c.receive(&reasonLen); err != nil {
 		return "", err

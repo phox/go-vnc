@@ -5,21 +5,12 @@ package vnc
 import (
 	"io"
 
-	"github.com/alexsnet/go-vnc/logging"
 	"github.com/alexsnet/go-vnc/rfbflags"
-	"github.com/golang/glog"
 )
 
 // clientInit implements §7.3.1 ClientInit.
 func (c *ClientConn) clientInit() error {
-	if logging.V(logging.FnDeclLevel) {
-		glog.Info(logging.FnName())
-	}
-
 	sharedFlag := rfbflags.BoolToRFBFlag(!c.config.Exclusive)
-	if logging.V(logging.ResultLevel) {
-		glog.Infof("sharedFlag: %d", sharedFlag)
-	}
 	if err := c.send(sharedFlag); err != nil {
 		return err
 	}
@@ -65,16 +56,9 @@ func (m *ServerInit) Unmarshal(data []byte) error {
 
 // serverInit implements §7.3.2 ServerInit.
 func (c *ClientConn) serverInit() error {
-	if logging.V(logging.FnDeclLevel) {
-		glog.Info(logging.FnName())
-	}
-
 	var msg ServerInit
 	if err := msg.Read(c.Conn); err != nil {
 		return Errorf("failure reading ServerInit message; %v", err)
-	}
-	if logging.V(logging.ResultLevel) {
-		glog.Infof("ServerInit message: %v", msg)
 	}
 
 	c.setFramebufferWidth(msg.FBWidth)
