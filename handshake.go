@@ -122,6 +122,8 @@ func (c *ClientConn) securityHandshake33() error {
 		auth = &ClientAuthNone{}
 	case secTypeVNCAuth:
 		auth = &ClientAuthVNC{c.config.Password}
+	case secTypeVeNCrypt:
+		auth = &ClientAuthVeNCryptAuth{}
 	default:
 		return NewVNCError(fmt.Sprintf("Security handshake failed; invalid security type: %v", secType))
 	}
