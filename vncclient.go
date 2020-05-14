@@ -11,8 +11,8 @@ import (
 	"net"
 	"reflect"
 
-	"github.com/alexsnet/go-vnc/go/metrics"
-	"github.com/alexsnet/go-vnc/messages"
+	"github.com/phox/go-vnc/go/metrics"
+	"github.com/phox/go-vnc/messages"
 	"golang.org/x/net/context"
 )
 

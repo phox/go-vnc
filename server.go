@@ -8,9 +8,9 @@ import (
 	"fmt"
 	"image"
 
-	"github.com/alexsnet/go-vnc/encodings"
-	"github.com/alexsnet/go-vnc/messages"
-	"github.com/alexsnet/go-vnc/rfbflags"
+	"github.com/phox/go-vnc/encodings"
+	"github.com/phox/go-vnc/messages"
+	"github.com/phox/go-vnc/rfbflags"
 )
 
 // ServerMessage is the interface satisfied by server messages.

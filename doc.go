@@ -15,9 +15,9 @@ with something more appropriate for your setup.
     "net"
     "time"
 
-    "github.com/alexsnet/go-vnc"
-    "github.com/alexsnet/go-vnc/messages"
-    "github.com/alexsnet/go-vnc/rfbflags"
+    "github.com/phox/go-vnc"
+    "github.com/phox/go-vnc/messages"
+    "github.com/phox/go-vnc/rfbflags"
   )
 
   func main() {

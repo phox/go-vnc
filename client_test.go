@@ -8,12 +8,12 @@ import (
 	"testing"
 	"time"
 
-	"github.com/alexsnet/go-vnc/buttons"
-	"github.com/alexsnet/go-vnc/encodings"
-	"github.com/alexsnet/go-vnc/go/operators"
-	"github.com/alexsnet/go-vnc/keys"
-	"github.com/alexsnet/go-vnc/messages"
-	"github.com/alexsnet/go-vnc/rfbflags"
+	"github.com/phox/go-vnc/buttons"
+	"github.com/phox/go-vnc/encodings"
+	"github.com/phox/go-vnc/go/operators"
+	"github.com/phox/go-vnc/keys"
+	"github.com/phox/go-vnc/messages"
+	"github.com/phox/go-vnc/rfbflags"
 	"golang.org/x/net/context"
 )
 

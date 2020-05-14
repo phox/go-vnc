@@ -5,7 +5,7 @@ package vnc
 import (
 	"io"
 
-	"github.com/alexsnet/go-vnc/rfbflags"
+	"github.com/phox/go-vnc/rfbflags"
 )
 
 // clientInit implements §7.3.1 ClientInit.
